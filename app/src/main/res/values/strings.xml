@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Youtube Api Testing</string>
+    <string name="reminders_notification_channel_id">" \"notification_channel_id\""</string>
+    <string name="title_notification_reminder">Time to study</string>
+    <string name="description_notification_reminder">It\'s time to watch %s from channel %s</string>
+</resources>
