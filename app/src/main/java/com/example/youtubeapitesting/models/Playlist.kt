@@ -1,7 +1,6 @@
 package com.example.youtubeapitesting.models
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 @Entity
@@ -13,5 +12,6 @@ data class Playlist(
     val thumbnail: String,
     val itemCount: Int,
     val itemComplete: Int = 0,
+    val isTrash: Boolean = false,
     val addedTime: Long = System.currentTimeMillis()
 )

@@ -25,15 +25,16 @@ import coil.compose.AsyncImage
 import com.example.youtubeapitesting.R
 import com.example.youtubeapitesting.VideosViewModel
 import com.example.youtubeapitesting.models.Video
+import com.example.youtubeapitesting.navigation.Screens
 import com.example.youtubeapitesting.ui.YoutubePlayerActivity
 
 @Composable
-fun PlayListScreen(navController: NavController, viewModel: VideosViewModel, playListId: String) {
+fun VideoListScreen(navController: NavController, viewModel: VideosViewModel, playListId: String) {
 
-    val list by viewModel.videos.collectAsState()
+    /*val list by viewModel.videos.collectAsState(listOf<Video>())
 
     LaunchedEffect(key1 = Unit) {
-        viewModel.getVideosFromPlaylist(playListId)
+        viewModel.getVideosFromPlaylist(playListId, Screens.VideoListScreen.id)
     }
     val context = LocalContext.current
 
@@ -50,11 +51,16 @@ fun PlayListScreen(navController: NavController, viewModel: VideosViewModel, pla
                 context.startActivity(intent)
             }
         }
-    }
+    }*/
 }
 
 @Composable
-fun VideoRow(video: Video, viewModel: VideosViewModel, playListId: String, onClickVideo: () -> Unit) {
+fun VideoRow(
+    video: Video,
+    viewModel: VideosViewModel,
+    playListId: String,
+    onClickVideo: () -> Unit
+) {
     ElevatedCard {
         Row(
             Modifier
@@ -81,7 +87,8 @@ fun VideoRow(video: Video, viewModel: VideosViewModel, playListId: String, onCli
                             .padding(horizontal = 4.dp)
                             .align(Alignment.BottomEnd),
                         color = Color.White,
-                        text = time)
+                        text = time
+                    )
                     /*LinearProgressIndicator(
                         modifier = Modifier
                             .width(120.dp)
@@ -93,10 +100,11 @@ fun VideoRow(video: Video, viewModel: VideosViewModel, playListId: String, onCli
                     )*/
                 }
             }
-            Log.d("TAG", "getVideosFromPlaylist222: $time")
+
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 val isComplete by rememberUpdatedState(
-                    video.duration != 0L && video.duration == video.progress)
+                    video.duration != 0L && video.progress >= video.duration - 1
+                )
                 Text(text = video.title)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -108,7 +116,7 @@ fun VideoRow(video: Video, viewModel: VideosViewModel, playListId: String, onCli
                         modifier = Modifier
                             .weight(1f)
                             .semantics { contentDescription = "Localized Description" },
-                        progress = if (video.duration != 0L) (video.progress / video.duration).toFloat() else 0f,
+                        progress = if (video.duration != 0L) (video.progress / video.duration.toFloat()) else 0f,
                         strokeCap = StrokeCap.Round
                     )
                     val context = LocalContext.current
@@ -121,9 +129,9 @@ fun VideoRow(video: Video, viewModel: VideosViewModel, playListId: String, onCli
                         }
                     }) {
                         Icon(
-                            painter = painterResource(id = if(isComplete)R.drawable.icon_check_circle_rounded else R.drawable.icon_check_circle_outline_rounded),
+                            painter = painterResource(id = if (isComplete) R.drawable.icon_check_circle_rounded else R.drawable.icon_check_circle_outline_rounded),
                             contentDescription = "Done",
-                            tint = if(isComplete) MaterialTheme.colorScheme.primary else Color.Gray
+                            tint = if (isComplete) MaterialTheme.colorScheme.primary else Color.Gray
                         )
                     }
                 }

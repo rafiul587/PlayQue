@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.youtubeapitesting.Constants.Companion.BASE_URL
 import com.example.youtubeapitesting.data.AppDatabase
+import com.example.youtubeapitesting.models.NetworkResultCallAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,6 +26,15 @@ object NetworkModule {
             .Builder()
             .readTimeout(15, TimeUnit.SECONDS)
             .connectTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor {
+                val originalHttpUrl = it.request().url
+                val url = originalHttpUrl.newBuilder()
+                    .addQueryParameter("key", "YOUR_YOUTUBE_API_KEY")
+                    .addQueryParameter("maxResults", "20").build()
+                val request = it.request().newBuilder()
+                request.url(url)
+                return@addInterceptor it.proceed(request.build())
+            }
             .build()
     }
 
@@ -32,6 +42,11 @@ object NetworkModule {
     @Provides
     fun provideConverterFactory(): GsonConverterFactory =
         GsonConverterFactory.create()
+
+    @Singleton
+    @Provides
+    fun provideAdapterFactory(): NetworkResultCallAdapterFactory =
+        NetworkResultCallAdapterFactory.create()
 
     @Singleton
     @Provides
@@ -48,8 +63,8 @@ object NetworkModule {
 
     @Singleton
     @Provides
-    fun provideCurrencyService(retrofit: Retrofit): ApiInterface =
-        retrofit.create(ApiInterface::class.java)
+    fun provideCurrencyService(retrofit: Retrofit): ApiService =
+        retrofit.create(ApiService::class.java)
 
     @Singleton
     @Provides
@@ -64,7 +79,11 @@ object NetworkModule {
 
     @Singleton
     @Provides
-    fun provideYourDao(db: AppDatabase) = db.playlistDao()
+    fun providePlaylistDao(db: AppDatabase) = db.playlistDao()
+
+    @Singleton
+    @Provides
+    fun provideVideosDao(db: AppDatabase) = db.videoDao()
 
     @Singleton
     @Provides

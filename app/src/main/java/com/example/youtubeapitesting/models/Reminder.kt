@@ -10,5 +10,6 @@ data class Reminder(
     val startDate: Long,
     val endDate: Long,
     val time: Long,
-    val daysMask: Int
+    val daysMask: Int,
+    val isEnabled: Boolean = false
 )

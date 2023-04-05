@@ -6,125 +6,157 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.*
 import com.example.youtubeapitesting.data.PlayListDao
-import com.example.youtubeapitesting.models.Playlist
+import com.example.youtubeapitesting.data.VideoDao
+import com.example.youtubeapitesting.models.ApiResponse
+import com.example.youtubeapitesting.models.Items
 import com.example.youtubeapitesting.models.Video
+import com.example.youtubeapitesting.navigation.Screens
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration
+import kotlin.run
 
 @HiltViewModel
 class VideosViewModel @Inject constructor(
-    private val apiInterface: ApiInterface,
-    private val playListDao: PlayListDao
+    private val apiService: ApiService,
+    private val videoDao: VideoDao
 ) : ViewModel() {
-    private val _videos = MutableStateFlow<List<Video>>(listOf())
+    private val _videos = MutableSharedFlow<PagingData<Video>>()
     var errorMessage: String by mutableStateOf("")
-    val videos: StateFlow<List<Video>>
+    val videos: Flow<PagingData<Video>>
         get() = _videos
 
-    fun getVideosFromPlaylist(playListId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val list = mutableListOf<Video>()
-                val response = apiInterface.getVideosFromPlaylist(playListId)
+    fun getVideosFromPlaylist(playListId: String, screenId: String) = viewModelScope.launch(Dispatchers.IO){
+        Pager(
+            pagingSourceFactory = { VideoListPagingSource(apiService, playListId) },
+            config = PagingConfig(
+                initialLoadSize = 20,
+                pageSize = 20,
+            )
+        ).flow.collectLatest {
+            it.map {
+                Log.d("TAG", "vjfhjfjdfhdjfhdfj: ${it.snippet?.resourceId?.videoId}")
+                //videoIds.add(it.snippet?.resourceId?.videoId ?: "")
+            }
+        }
+
+            /*val map = getVideoInfo(videoIds)
+            it.map {
+                Log.d("TAG", "vjfhjfjdfhdjfhdfj:here22 ${it.snippet?.resourceId?.videoId}")
+                val title = it.snippet?.title ?: ""
+
+                val id = it.snippet?.resourceId?.videoId ?: ""
+                val thumbnailUrl = it.snippet?.thumbnails?.medium?.url ?: ""
+                val durationString = map[id]?.contentDetails?.duration ?: ""
+                val duration = Duration.parse(durationString).inWholeSeconds
+                val viewCount = map[id]?.statistics?.viewCount ?: ""
+                val likeCount = map[id]?.statistics?.likeCount ?: ""
+                val video = Video(
+                    id = id + "_split_" + playListId,
+                    playlistId = playListId,
+                    title = title,
+                    thumbnail = thumbnailUrl,
+                    duration = duration,
+                    progress = 0,
+                    viewCount = if (viewCount.isEmpty()) "0" else getFormattedNumber(viewCount.toLong()),
+                    likeCount = if (likeCount.isEmpty()) "0" else getFormattedNumber(likeCount.toLong())
+                )
+                video
+            }
+        }.cachedIn(viewModelScope).collectLatest {
+            _videos.emit(it)
+        }*/
+}
+            /*val response = apiService.getVideosFromPlaylist(playListId)
                 if (response.isSuccessful) {
-                    val videoIds = response.body()?.get("items")?.asJsonArray?.map {
-                        it?.asJsonObject?.getAsJsonObject("snippet")?.getAsJsonObject("resourceId")
-                            ?.get("videoId")?.asString ?: ""
+
+                    val videoIds = response.body()?.items?.map {
+                        Log.d("TAG", "getVideosFromPlaylist: ${it.snippet?.resourceId}")
+                        it.snippet?.resourceId?.videoId ?: ""
                     }
-                    val map = mutableMapOf<String, Long>()
-                    val videoResponse =
-                        if (videoIds != null && videoIds.isNotEmpty()) apiInterface.getVideoInfo(
-                            videoIds
-                        ) else null
-                    videoResponse?.body()?.get("items")?.asJsonArray?.forEach {
-                        val duration = it?.asJsonObject?.getAsJsonObject("contentDetails")
-                            ?.get("duration")?.asString ?: ""
-                        val id = it?.asJsonObject?.get("id")?.asString ?: ""
-                        val s = Duration.parse(duration).inWholeSeconds
-                        map[id] = s
+
+                    val map = videoIds?.let { getVideoInfo(it) } ?: run {
+                        errorMessage = "Something went wrong!"
+                        return@launch
                     }
-                    response.body()?.get("items")?.asJsonArray?.forEach {
-                        val title =
-                            it?.asJsonObject?.getAsJsonObject("snippet")?.get("title").toString()
-                        val id = it?.asJsonObject?.getAsJsonObject("snippet")
-                            ?.getAsJsonObject("resourceId")?.get("videoId")?.asString ?: ""
-                        val thumbnailUrl = it.asJsonObject?.getAsJsonObject("snippet")
-                            ?.getAsJsonObject("thumbnails")?.getAsJsonObject("standard")?.get("url")
-                        val duration = map[id] ?: 0L
-                        thumbnailUrl?.asString?.let { url ->
-                            Video(
-                                id = id,
+                    val nextPageToken = response.body()?.nextPageToken? ?: ""
+                    if (map.size == response.body()?.items?.size) {
+                        response.body()?.items?.forEach {
+                            val title = it.snippet?.title ?: ""
+
+                            val id = it.snippet?.resourceId?.videoId ?: ""
+                            val thumbnailUrl = it.snippet?.thumbnails?.medium?.url ?: ""
+                            val durationString = map[id]?.contentDetails?.duration ?: ""
+                            val duration = Duration.parse(durationString).inWholeSeconds
+                            val viewCount = map[id]?.statistics?.viewCount ?: ""
+                            val likeCount = map[id]?.statistics?.likeCount ?: ""
+                            val video = Video(
+                                id = id + "_split_" + playListId,
                                 playlistId = playListId,
                                 title = title,
-                                thumbnail = url,
+                                thumbnail = thumbnailUrl,
                                 duration = duration,
-                                progress = 0
+                                progress = 0,
+                                nextPageToken = null,
+                                viewCount = if(viewCount.isEmpty()) "0" else getFormattedNumber(viewCount.toLong()),
+                                likeCount = if(likeCount.isEmpty()) "0" else getFormattedNumber(likeCount.toLong())
                             )
-                        }?.let { it2 -> list.add(it2) }
-                        Log.d("TAG", "getVideosFromPlaylist: $id")
+                            list.add(video)
+                            Log.d("TAG", "getVideosFromPlaylist: $list")
+                        }
+                        if(screenId == Screens.VideoListScreen.id) {
+                            videoDao.insertVideo(list)
+                            getVideosByPlaylistId(playListId)
+                        }else _videos.value = list
                     }
-                    playListDao.insertVideo(list)
-                    getVideosByPlaylistId(playListId)
                 } else {
-                    Log.d("TAG", "getVideosFromPlaylist: ${response.raw().toString()}")
+                    errorMessage = response.errorBody().toString()
                 }
 
             } catch (e: Exception) {
                 Log.d("TAG", "getVideosFromPlaylist: ${e.message}")
                 errorMessage = e.message.toString()
             }
-        }
-    }
+        }*/
 
-    fun getVideoInfo(videoIds: List<String>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val list = mutableListOf<Playlist>()
-                val response = apiInterface.getVideoInfo(videoIds)
-                if (response.isSuccessful) {
-                    response.body()?.get("items")?.asJsonArray?.forEach {
-                        val title =
-                            it?.asJsonObject?.getAsJsonObject("snippet")?.get("title")?.asString
-                                ?: ""
-                        val channelTitle = it?.asJsonObject?.getAsJsonObject("snippet")
-                            ?.get("channelTitle")?.asString ?: ""
-                        val duration =
-                            it?.asJsonObject?.getAsJsonObject("contentDetails")?.get("duration")
-                                .toString().toInt()
-                    }
-                    if (list.isNotEmpty()) {
-                        Log.d("TAG", "getPlaylistInfo:${list.first()} ")
-                        playListDao.insertAll(list.first())
-                    }
-                } else {
-                    Log.d("TAG", "getVideosFromPlaylist: ${response.raw().toString()}")
+
+    private suspend fun getVideoInfo(videoIds: List<String>): Map<String, Items> {
+        val map = mutableMapOf<String, Items>()
+        try {
+            val response = apiService.getVideo(videoIds)
+            if (response.isSuccessful) {
+                response.body()?.items?.forEach {
+                    val id = it.id ?: ""
+                    map[id] = it
                 }
+            } else {
 
-            } catch (e: Exception) {
-                Log.d("TAG", "getVideosFromPlaylist: ${e.message}")
-                errorMessage = e.message.toString()
             }
+
+        } catch (e: Exception) {
+            Log.d("TAG", "getVideosFromPlaylist: ${e.message}")
+            errorMessage = e.message.toString()
         }
+        return map
     }
 
     private fun getVideosByPlaylistId(id: String) = viewModelScope.launch(Dispatchers.IO) {
         Log.d("TAG", "getPlaylists222: ")
-        playListDao.getVideos(id)
+        videoDao.getVideos(id)
             .collectLatest {
                 Log.d("TAG", "getPlaylists222: ${it.size}")
                 it.forEach { Log.d("TAG", "getPlaylists222: $it") }
-                _videos.value = it
+                //_videos.value = it
             }
     }
 
     fun updateVideo(video: Video) = viewModelScope.launch(Dispatchers.IO) {
-        playListDao.updateVideo(video = video)
+        videoDao.updateVideo(video = video)
     }
 }

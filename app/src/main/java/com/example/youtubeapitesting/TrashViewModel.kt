@@ -8,8 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.youtubeapitesting.data.PlayListDao
 import com.example.youtubeapitesting.models.Playlist
-import com.example.youtubeapitesting.models.PlaylistWithReminder
-import com.example.youtubeapitesting.models.Reminder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,13 +17,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class TrashViewModel @Inject constructor(
     private val apiService: ApiService,
     private val playListDao: PlayListDao
 ) : ViewModel() {
-    private val _playlistInfo = MutableStateFlow<List<PlaylistWithReminder>>(listOf())
-    val playlistInfo: StateFlow<List<PlaylistWithReminder>>
-        get() = _playlistInfo
+    private val _trashedPlaylists = MutableStateFlow<List<Playlist>>(listOf())
+    val trashedPlaylists: StateFlow<List<Playlist>>
+        get() = _trashedPlaylists
     var errorMessage: String by mutableStateOf("")
 
     fun addNewPlaylist(playListId: String) {
@@ -59,23 +57,23 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun getActivePlaylists() = viewModelScope.launch(Dispatchers.IO) {
-        playListDao.getActivePlaylists()
+    private fun getTrashedPlaylists() = viewModelScope.launch(Dispatchers.IO) {
+        playListDao.getTrashedPlaylist()
             .collectLatest {
                 it.forEach { Log.d("TAG", "getPlaylists: $it") }
-                _playlistInfo.value = it
+                _trashedPlaylists.value = it
             }
     }
 
-    fun saveReminder(reminder: Reminder) = viewModelScope.launch(Dispatchers.IO) {
-        playListDao.insertReminder(reminder = reminder)
+    fun deletePlaylistPermanently(playlist: Playlist) = viewModelScope.launch(Dispatchers.IO) {
+        playListDao.delete(playlist = playlist)
     }
 
-    fun moveToTrash(playlist: Playlist) = viewModelScope.launch(Dispatchers.IO) {
+    fun restoreFromTrash(playlist: Playlist) = viewModelScope.launch(Dispatchers.IO) {
         playListDao.updatePlaylist(playlist = playlist)
     }
 
     init {
-        getActivePlaylists()
+        getTrashedPlaylists()
     }
 }
