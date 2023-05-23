@@ -4,14 +4,21 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.*
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.youtubeapitesting.HomeViewModel
-import com.example.youtubeapitesting.SearchViewModel
-import com.example.youtubeapitesting.TrashViewModel
-import com.example.youtubeapitesting.VideosViewModel
-import com.example.youtubeapitesting.ui.screens.*
+import com.example.youtubeapitesting.ui.screens.SearchedPlaylistScreen
+import com.example.youtubeapitesting.ui.screens.trash.TrashScreen
+import com.example.youtubeapitesting.ui.screens.about.AboutDeveloperScreen
+import com.example.youtubeapitesting.ui.screens.home.HomeScreen
+import com.example.youtubeapitesting.ui.screens.home.HomeViewModel
+import com.example.youtubeapitesting.ui.screens.search.SearchScreen
+import com.example.youtubeapitesting.ui.screens.search.SearchVideoListScreen
+import com.example.youtubeapitesting.ui.screens.search.SearchViewModel
+import com.example.youtubeapitesting.ui.screens.trash.TrashViewModel
+import com.example.youtubeapitesting.ui.screens.videoplayer.VideoPlayerScreen
+import com.example.youtubeapitesting.ui.screens.videos.VideoListScreen
+import com.example.youtubeapitesting.ui.screens.videos.VideosViewModel
 
 sealed class Screens(val id: String) {
     object Home : Screens("home")
@@ -56,13 +63,13 @@ fun NavigationController(
             ) {
                 val id = it.arguments?.getString("id") ?: ""
                 val viewModel = hiltViewModel<VideosViewModel>()
-                VideoListScreen(navController = navController,viewModel,  id)
+                VideoListScreen(viewModel, id)
             }
             composable(
                 route = "${Screens.SearchVideoListScreen.id}/{id}"
             ) {
                 val id = it.arguments?.getString("id") ?: ""
-                val viewModel = hiltViewModel<VideosViewModel>()
+                val viewModel = hiltViewModel<SearchViewModel>()
                 SearchVideoListScreen(navController = navController,viewModel,  id)
             }
             composable(
@@ -70,7 +77,7 @@ fun NavigationController(
             ) {
                 val id = it.arguments?.getString("channelId") ?: ""
                 val viewModel = hiltViewModel<SearchViewModel>()
-                AddPlaylistScreen(navController = navController, viewModel,  id)
+                SearchedPlaylistScreen(navController = navController, viewModel,  id)
             }
             composable(route = Screens.VideoPlayer.id) {
                 VideoPlayerScreen(navController = navController)

@@ -1,7 +1,6 @@
 package com.example.youtubeapitesting.ui
 
 import android.content.pm.ActivityInfo
-import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -9,7 +8,7 @@ import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
-import com.example.youtubeapitesting.PlayerViewModel
+import com.example.youtubeapitesting.ui.screens.videoplayer.PlayerViewModel
 import com.example.youtubeapitesting.R
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener

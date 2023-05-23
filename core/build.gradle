@@ -16,9 +16,11 @@ android {
             'src/main/res-public'
         ]
     }
+    namespace 'com.pierfrancescosoffritti.androidyoutubeplayer'
 }
 
 dependencies {
+    implementation 'androidx.core:core-ktx:+'
     testImplementation "junit:junit:$versions.junit"
     androidTestImplementation "androidx.test:runner:$versions.runner"
     androidTestImplementation "androidx.test.espresso:espresso-core:$versions.espressoCore"
@@ -38,3 +40,4 @@ ext {
 }
 
 apply from: "../scripts/publish-module.gradle"
+apply plugin: 'org.jetbrains.kotlin.android'
