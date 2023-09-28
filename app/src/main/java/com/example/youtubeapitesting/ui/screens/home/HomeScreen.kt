@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -39,12 +41,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.youtubeapitesting.utils.AlarmReceiver
 import com.example.youtubeapitesting.R
 import com.example.youtubeapitesting.models.Playlist
 import com.example.youtubeapitesting.models.PlaylistWithReminder
 import com.example.youtubeapitesting.models.Reminder
 import com.example.youtubeapitesting.navigation.Screens
+import com.example.youtubeapitesting.utils.AlarmReceiver
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -54,7 +56,7 @@ import kotlin.math.pow
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel) {
     val playLists by viewModel.playlistInfo.collectAsState(emptyList())
-    Log.d("TAG", "HomeScreen: ${playLists}")
+
     PlayLists(
         modifier = Modifier.fillMaxSize(),
         playLists = playLists,
@@ -72,16 +74,18 @@ fun UrlInputLayout(
     onAddClick: (String) -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
+
     Column(
         modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LaunchedEffect(key1 = Unit) {
             focusRequester.requestFocus()
         }
-        OutlinedTextField(modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .focusRequester(focusRequester),
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .focusRequester(focusRequester),
             value = url,
             onValueChange = onUrlChange,
             placeholder = { Text(text = "Paste your playlist url here..") })
@@ -117,9 +121,7 @@ fun PlayLists(
     ) {
         items(playLists) {
             PlayListWithReminderRow(
-                playlistWithRem = it,
-                onPlaylistClick = onPlayListClick,
-                viewModel = viewModel
+                playlistWithRem = it, onPlaylistClick = onPlayListClick, viewModel = viewModel
             )
         }
     }
@@ -135,9 +137,7 @@ fun PlayListWithReminderRow(
         Column(modifier = Modifier.padding(16.dp)) {
             PlayListRow(playlist = playlistWithRem.list, onPlaylistClick = onPlaylistClick)
             Divider(
-                modifier = Modifier.padding(top = 10.dp),
-                color = Color.DarkGray,
-                thickness = 1.dp
+                modifier = Modifier.padding(top = 10.dp), color = Color.DarkGray, thickness = 1.dp
             )
             PlayListOption(playlistWithReminder = playlistWithRem, viewModel = viewModel)
         }
@@ -156,7 +156,7 @@ fun PlayListRow(playlist: Playlist, onPlaylistClick: (String) -> Unit) {
                 model = playlist.thumbnail,
                 contentDescription = "",
                 modifier = Modifier
-                    .width(130.dp)
+                    .width(120.dp)
                     .height(80.dp)
                     .clip(RoundedCornerShape(5.dp)),
                 contentScale = ContentScale.FillBounds
@@ -167,14 +167,17 @@ fun PlayListRow(playlist: Playlist, onPlaylistClick: (String) -> Unit) {
                 text = playlist.title, fontSize = 18.sp
             )
             Spacer(modifier = Modifier.height(2.dp))
+            Log.d("TAG", "PlayListRow: ${MaterialTheme.colorScheme.onTertiary.toArgb()}")
             Text(
-                text = playlist.channelTitle, fontSize = 12.sp, color = Color.LightGray
+                text = playlist.channelTitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onTertiary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${playlist.itemCount} videos",
                 fontSize = 12.sp,
-                color = Color.LightGray
+                color = MaterialTheme.colorScheme.onTertiary
             )
         }
     }
@@ -190,6 +193,16 @@ fun PlayListOption(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val context = LocalContext.current
+        val list by rememberUpdatedState(
+            newValue = generateWeekdays(
+                playlistWithReminder.rem?.daysMask ?: 0
+            )
+        )
+        val dateFormatter = remember {
+            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        }
+
         Box(
             modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center
         ) {
@@ -209,15 +222,7 @@ fun PlayListOption(
                 textAlign = TextAlign.Center
             )
         }
-        val list by rememberUpdatedState(
-            newValue = generateWeekdays(
-                playlistWithReminder.rem?.daysMask ?: 0
-            )
-        )
-        val context = LocalContext.current
-        val dateFormatter = remember {
-            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        }
+
         if (playlistWithReminder.rem == null || !playlistWithReminder.rem.isEnabled) {
             val addedDate by rememberUpdatedState(dateFormatter.format(playlistWithReminder.list.addedTime))
             Column(
@@ -229,7 +234,7 @@ fun PlayListOption(
                 }
                 CompositionLocalProvider(
                     LocalTextStyle provides TextStyle.Default.copy(
-                        color = Color.LightGray, fontSize = 13.sp
+                        color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
                     )
                 ) {
                     Text(text = "No Reminder Set")
@@ -282,7 +287,7 @@ fun PlayListOption(
                 Row {
                     CompositionLocalProvider(
                         LocalTextStyle provides TextStyle.Default.copy(
-                            color = Color.LightGray, fontSize = 13.sp
+                            color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
                         )
                     ) {
                         Text(text = repetition())
@@ -291,20 +296,28 @@ fun PlayListOption(
                 }
             }
         }
-        PlaylistOptionsDropDown(playlistWithReminder = playlistWithReminder,
-            onRemindSet = { startData, endDate, time, daysMask ->
+
+        PlaylistOptionsDropDown(
+            playlistWithReminder = playlistWithReminder,
+            onRemindSet = { startDate, endDate, time, timeInMilisec, daysMask ->
                 viewModel.saveReminder(
                     Reminder(
                         playlistId = playlistWithReminder.list.id,
-                        startDate = startData,
+                        startDate = startDate,
                         endDate = endDate,
-                        time = time,
+                        time = timeInMilisec,
+                        isEnabled = true,
                         daysMask = daysMask
                     )
                 )
-                list.forEach {
-                    scheduleAlarm(context, it, time)
-                }
+                scheduleAlarm(
+                    context = context,
+                    playlist = playlistWithReminder.list,
+                    days = list,
+                    time = time,
+                    startDate = startDate,
+                    endDate = endDate
+                )
             },
             onDelete = {
                 viewModel.moveToTrash(
@@ -317,7 +330,7 @@ fun PlayListOption(
 @Composable
 fun ReminderDialog(
     playlistWithReminder: PlaylistWithReminder,
-    onRemindSet: (Long, Long, Long, Int) -> Unit,
+    onRemindSet: (Long, Long, String, Long, Int) -> Unit,
     onDismiss: (Boolean) -> Unit
 ) {
 
@@ -345,7 +358,7 @@ fun ReminderDialog(
 @Composable
 fun ReminderDialogContent(
     playlistWithReminder: PlaylistWithReminder,
-    onRemindSet: (Long, Long, Long, Int) -> Unit,
+    onRemindSet: (Long, Long, String, Long, Int) -> Unit,
     onDismiss: (Boolean) -> Unit
 ) {
     var showPicker by remember { mutableStateOf(-1) }
@@ -451,56 +464,78 @@ fun ReminderDialogContent(
                 .padding(8.dp)
                 .fillMaxSize()
         ) {
-            DialogTitle(onDismiss = onDismiss) {
-                val dateSplit = date.split("-")
-                if (dateSplit.size > 1) {
+            DialogTitle(
+                onDismiss = onDismiss,
+                onSave = {
+                    val dateSplit = date.split("-")
+                    if (dateSplit.size > 1) {
 
-                    val start = dateToMilliseconds(dateSplit[0].trim())
-                    val end = dateToMilliseconds(dateSplit[1].trim())
-                    val timeMilliSec = timeToMilliseconds(time)
-                    if (start != null && end != null) {
-                        val daysMask = if (selectedItem == 0) {
-                            127
-                        } else {
-                            selectedItems.sumOf { 2.0.pow(it.toDouble()) }.toInt()
-                        }
-                        Log.d("TAG", "ReminderDialogContent: $start, $end, $daysMask")
-                        if (timeMilliSec != null) {
-                            onRemindSet(start, end, timeMilliSec, daysMask)
-                        } else timeError = "Wrong format! Use format hh:mm a"
-                    } else dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
-                } else {
-                    dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
+                        val start = dateToMilliseconds(dateSplit[0].trim())
+                        val end = dateToMilliseconds(dateSplit[1].trim())
+                        val timeMilliSec = timeToMilliseconds(time)
+                        if (start != null && end != null) {
+                            val daysMask = if (selectedItem == 0) {
+                                127
+                            } else {
+                                selectedItems.sumOf { 2.0.pow(it.toDouble()) }.toInt()
+                            }
+                            Log.d("TAG", "ReminderDialogContent: $start, $end, $daysMask")
+                            if (timeMilliSec != null) {
+                                onRemindSet(start, end, time, timeMilliSec, daysMask)
+                            } else timeError = "Wrong format! Use format hh:mm a"
+                        } else dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
+                    } else {
+                        dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
+                    }
+
                 }
-
-            }
+            )
             Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedTextField(value = date, onValueChange = {
-                dateError = ""
-                onDateChange(it)
-            }, label = {
-                Text(text = "Select Date")
-            }, placeholder = {
-                Text(text = "dd/MM/yyyy - dd/MM/yyyy")
-            }, trailingIcon = {
-                IconButton(onClick = { showPicker = 0 }) {
-                    Icon(imageVector = Icons.Default.DateRange, contentDescription = "Date")
-                }
-            }, isError = dateError.isNotEmpty(), modifier = Modifier.fillMaxWidth()
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showPicker = 0 },
+                value = date,
+                onValueChange = {
+                    dateError = ""
+                    onDateChange(it)
+                },
+                label = {
+                    Text(text = "Select Date")
+                },
+                placeholder = {
+                    Text(text = "dd/MM/yyyy - dd/MM/yyyy")
+                },
+                trailingIcon = {
+                    IconButton(onClick = { showPicker = 0 }) {
+                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Date")
+                    }
+                },
+                isError = dateError.isNotEmpty(),
+                readOnly = true
             )
-            OutlinedTextField(value = time, onValueChange = onTimeChange, label = {
-                Text(text = "Select Time")
-            }, placeholder = {
-                Text(text = "00:00 AM/PM")
-            }, trailingIcon = {
-                IconButton(onClick = { showPicker = 1 }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_time),
-                        contentDescription = "Time"
-                    )
-                }
-            }, modifier = Modifier.fillMaxWidth()
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showPicker = 1 },
+                value = time,
+                onValueChange = onTimeChange,
+                label = {
+                    Text(text = "Select Time")
+                },
+                placeholder = {
+                    Text(text = "00:00 AM/PM")
+                },
+                trailingIcon = {
+                    IconButton(onClick = { showPicker = 1 }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_time),
+                            contentDescription = "Time"
+                        )
+                    }
+                },
+                readOnly = true
             )
 
             NotificationRepeatContainer(
@@ -712,7 +747,7 @@ fun DialogTitle(
 @Composable
 fun PlaylistOptionsDropDown(
     playlistWithReminder: PlaylistWithReminder,
-    onRemindSet: (Long, Long, Long, Int) -> Unit,
+    onRemindSet: (Long, Long, String, Long, Int) -> Unit,
     onDelete: () -> Unit
 ) {
     val listItems = listOf(
@@ -802,6 +837,7 @@ fun MoveToTrashDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 }
 
 fun dateToMilliseconds(date: String): Long? {
+    Log.d("TAG", "dateToMilliseconds: $date")
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     return try {
         val mDate = sdf.parse(date)
@@ -812,10 +848,11 @@ fun dateToMilliseconds(date: String): Long? {
     }
 }
 
-fun timeToMilliseconds(date: String): Long? {
+fun timeToMilliseconds(timeString: String): Long? {
     val formatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
     return try {
-        val time = formatter.parse(date)
+        val time = formatter.parse(timeString)
+        Log.d("TAG", "timeToMilliseconds: $time")
         val timeInMilliseconds = time?.time
         timeInMilliseconds
     } catch (e: ParseException) {
@@ -835,27 +872,83 @@ fun generateWeekdays(mask: Int): List<Int> {
     return list
 }
 
-private fun scheduleAlarm(context: Context, dayOfWeek: Int, time: Long) {
-    val calendar = Calendar.getInstance()
-    calendar[Calendar.DAY_OF_WEEK] = dayOfWeek
-    calendar.timeInMillis = time
+private fun scheduleAlarm(
+    context: Context,
+    playlist: Playlist,
+    days: List<Int>,
+    time: String,
+    startDate: Long,
+    endDate: Long
+) {
+    val alarmIntent = Intent(context, AlarmReceiver::class.java)
 
+    alarmIntent.putExtra("playlistId", playlist.id)
+    alarmIntent.putExtra("title", playlist.title)
+    alarmIntent.putExtra("channelTitle", playlist.channelTitle)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        alarmIntent.identifier = playlist.id
+    } else alarmIntent.addCategory(playlist.id)
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+    Log.d("TAG", "scheduleAlarm: ${days},,,$time")
+    val timeSplit = time.split(":", " ")
+
+    if (days.size == 7) {
+        val alarmPI =
+            PendingIntent.getBroadcast(context, 7, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
+        val calendar = setTimeInCalendar(0, startDate, timeSplit)
+        val alarmSchedule = calendar.timeInMillis
+        if (alarmSchedule > endDate) {
+            return
+        }
+        alarmManager?.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            alarmSchedule,
+            AlarmManager.INTERVAL_DAY,
+            alarmPI
+        )
+    }
+
+    days.forEach { day ->
+        val alarmPI =
+            PendingIntent.getBroadcast(context, day, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        if (timeSplit.size > 2) {
+            val calendar = setTimeInCalendar(day, startDate, timeSplit)
+
+            val alarmSchedule = calendar.timeInMillis
+            if (alarmSchedule > endDate) {
+                return@forEach
+            }
+            alarmManager?.setRepeating(
+                AlarmManager.RTC_WAKEUP,
+                alarmSchedule,
+                AlarmManager.INTERVAL_DAY * 7,
+                alarmPI
+            )
+        }
+    }
+}
+
+// Function to set the time in a Calendar instance
+fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calendar {
+    val calendar = Calendar.getInstance(Locale.getDefault())
+    calendar.timeInMillis = startDate
+    //Setting Sunday as the first day of the week so that it stays consistent for any locale.
+    //So now for sunday always DAY_OF_WEEK = 1
+    calendar.firstDayOfWeek = Calendar.SUNDAY
+    //day+1 because when select days from the list the index start from 0. i.e. 0 -> Sunday
+    //but the days count in calendar start from 1.
+    calendar[Calendar.DAY_OF_WEEK] = day + 1
+    calendar[Calendar.HOUR_OF_DAY] = if (timeSplit[2] == "PM") {
+        timeSplit[0].toInt() + 12
+    } else timeSplit[0].toInt()
+    calendar[Calendar.MINUTE] = timeSplit[1].toInt()
+    calendar[Calendar.SECOND] = 0
     // Check we aren't setting it in the past which would trigger it to fire instantly
     if (calendar.timeInMillis < System.currentTimeMillis()) {
         calendar.add(Calendar.DAY_OF_YEAR, 7)
     }
-
-    val alarmIntent = Intent(context, AlarmReceiver::class.java)
-
-    alarmIntent.putExtra("AlarmID", "Alarm_Id_12345")
-
-    val alarmPI =
-        PendingIntent.getBroadcast(context, 1234, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
-
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-    alarmManager?.setRepeating(
-        AlarmManager.RTC_WAKEUP, calendar.timeInMillis, AlarmManager.INTERVAL_DAY * 7, alarmPI
-    )
+    return calendar
 }
 
 

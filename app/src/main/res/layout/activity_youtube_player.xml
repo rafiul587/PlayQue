@@ -22,4 +22,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+    <TextView
+        android:id="@+id/instruction"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/youtube_player_view"
+        android:layout_marginTop="40dp"
+        android:textAlignment="center"
+        android:textSize="18sp"
+        android:text="@string/player_instruction"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

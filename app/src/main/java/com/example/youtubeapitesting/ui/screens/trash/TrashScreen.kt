@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.youtubeapitesting.models.Playlist
+import com.example.youtubeapitesting.ui.screens.components.EmptyScreen
 
 
 @Composable
@@ -44,13 +45,23 @@ fun TrashLists(
     onPlayListClick: (String) -> Unit,
     viewModel: TrashViewModel
 ) {
-    LazyColumn(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(start = 8.dp, end = 16.dp, bottom = 56.dp)
-    ) {
-        items(playLists) {
-            TrashListRow(playlist = it, onPlaylistClick = onPlayListClick, viewModel = viewModel)
+    if (playLists.isEmpty()) {
+        EmptyScreen(
+            modifier = Modifier.fillMaxSize(),
+            message = "Trash is Empty!")
+    } else {
+        LazyColumn(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 8.dp, end = 16.dp, bottom = 56.dp)
+        ) {
+            items(playLists) {
+                TrashListRow(
+                    playlist = it,
+                    onPlaylistClick = onPlayListClick,
+                    viewModel = viewModel
+                )
+            }
         }
     }
 }
@@ -80,34 +91,32 @@ fun TrashListRow(
             Column(
                 modifier = Modifier
                     .padding(start = 16.dp)
+                    .weight(1f)
             ) {
-                Row() {
-                    Text(
-                        modifier = Modifier.weight(1f),
-                        text = playlist.title, fontSize = 16.sp
-                    )
-                    TrashOptionsDropDown(onRestore = {
-                        viewModel.restoreFromTrash(
-                            playlist.copy(isTrash = false)
-                        )
-                    }, onDelete = {
-                        viewModel.deletePlaylistPermanently(
-                            playlist
-                        )
-                    })
-                }
-
+                Text(
+                    text = playlist.title, fontSize = 16.sp
+                )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = playlist.channelTitle, fontSize = 12.sp, color = Color.LightGray
+                    text = playlist.channelTitle, fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${playlist.itemCount} videos",
                     fontSize = 12.sp,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
             }
+            TrashOptionsDropDown(onRestore = {
+                viewModel.restoreFromTrash(
+                    playlist.copy(isTrash = false)
+                )
+            }, onDelete = {
+                viewModel.deletePlaylistPermanently(
+                    playlist
+                )
+            })
         }
     }
 }

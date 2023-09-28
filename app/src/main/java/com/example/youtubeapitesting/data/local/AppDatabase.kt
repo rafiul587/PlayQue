@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.youtubeapitesting.models.Playlist
 import com.example.youtubeapitesting.models.Reminder
+import com.example.youtubeapitesting.models.RemoteKey
 import com.example.youtubeapitesting.models.Video
 
 @Database(entities = [Playlist::class, Reminder::class, Video::class, RemoteKey::class], version = 1)

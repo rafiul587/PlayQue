@@ -1,7 +1,8 @@
 package com.example.youtubeapitesting.ui.screens.search
 
-import com.example.youtubeapitesting.data.remote.sources.PlaylistByChannelPagingSource
-import com.example.youtubeapitesting.data.remote.sources.SearchChannelPagingSource
+import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
+import android.text.format.DateUtils
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,8 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
+import com.example.youtubeapitesting.R
 import com.example.youtubeapitesting.data.local.PlayListDao
 import com.example.youtubeapitesting.data.remote.ApiService
+import com.example.youtubeapitesting.data.remote.sources.PlaylistByChannelPagingSource
+import com.example.youtubeapitesting.data.remote.sources.SearchChannelPagingSource
 import com.example.youtubeapitesting.data.remote.sources.SearchPlaylistPagingSource
 import com.example.youtubeapitesting.data.remote.sources.SearchedVideoPagingSource
 import com.example.youtubeapitesting.models.*
@@ -19,7 +23,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.*
 import javax.inject.Inject
 import kotlin.math.ln
 import kotlin.math.pow
@@ -30,11 +38,14 @@ class SearchViewModel @Inject constructor(
     private val apiService: ApiService,
     private val playListDao: PlayListDao
 ) : ViewModel() {
-    private val _channelLists = MutableStateFlow<PagingData<Channel>>(PagingData.empty())
+
+    private val _channelLists = MutableStateFlow<PagingData<Channel>>(
+        emptyData()
+    )
     val channelLists: Flow<PagingData<Channel>>
         get() = _channelLists
 
-    private val _playlists = MutableStateFlow<PagingData<Playlist>>(PagingData.empty())
+    private val _playlists = MutableStateFlow<PagingData<Playlist>>(emptyData())
     val playlists: Flow<PagingData<Playlist>>
         get() = _playlists
 
@@ -61,7 +72,7 @@ class SearchViewModel @Inject constructor(
                 "channel",
                 it
             )
-        }) {
+        }, query) {
             getChannelResults(it)
         }
     }.flow.cachedIn(viewModelScope)
@@ -84,6 +95,14 @@ class SearchViewModel @Inject constructor(
         }
     }.flow.cachedIn(viewModelScope)
 
+    private fun <T : Any> emptyData(): PagingData<T> = PagingData.empty(
+        LoadStates(
+            LoadState.NotLoading(false),
+            LoadState.NotLoading(false),
+            LoadState.NotLoading(false)
+        )
+    )
+
 
     /*fun setChannelSearch(query: String) {
         _channelQuery.value = query
@@ -95,49 +114,51 @@ class SearchViewModel @Inject constructor(
 
     fun search(type: Int) {
         selectedType = type
-        viewModelScope.launch(Dispatchers.IO) {
-            if (type == CHANNEL) {
-                _channelLists.emitAll(getChannelPager())
-            } else {
-                _playlists.emitAll(getPlaylistPager())
+        if (query.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                if (type == CHANNEL) {
+                    _channelLists.emitAll(getChannelPager())
+                } else {
+                    _playlists.emitAll(getPlaylistPager())
+                }
             }
         }
     }
-/*            try {
+    /*            try {
 
-                Log.d("TAG", "search: ")
-                val response = apiService.search(query = query,
-                    type = type,
-                    "")
-                if (response.isSuccessful) {
+                    Log.d("TAG", "search: ")
+                    val response = apiService.search(query = query,
+                        type = type,
+                        "")
+                    if (response.isSuccessful) {
 
-                    if (selectedType == CHANNEL) {
-                        val results = getChannelResults(response.body()!!.items)
-                        Log.d("TAG", "search: $results")
-                        if (results.isEmpty()) {
+                        if (selectedType == CHANNEL) {
+                            val results = getChannelResults(response.body()!!.items)
+                            Log.d("TAG", "search: $results")
+                            if (results.isEmpty()) {
 
-                            errorMessage = "Something went wrong!"
+                                errorMessage = "Something went wrong!"
+                            } else {
+
+                                _channelLists.value = results
+                            }
                         } else {
-
-                            _channelLists.value = results
+                            val results = getPlaylistResults(response.body()!!.items)
+                            if (results.isEmpty()) {
+                                errorMessage = "Something went wrong!"
+                            } else {
+                                _playlists.value = results
+                            }
                         }
                     } else {
-                        val results = getPlaylistResults(response.body()!!.items)
-                        if (results.isEmpty()) {
-                            errorMessage = "Something went wrong!"
-                        } else {
-                            _playlists.value = results
-                        }
+                        errorMessage = response.message().toString()
                     }
-                } else {
-                    errorMessage = response.message().toString()
-                }
 
-            } catch (e: Exception) {
-                errorMessage = e.message.toString()
+                } catch (e: Exception) {
+                    errorMessage = e.message.toString()
+                }
             }
-        }
-    }*/
+        }*/
 
     private suspend fun getChannelResults(items: List<SearchResponse.Items>): List<Channel> {
         val list = mutableListOf<Channel>()
@@ -179,42 +200,47 @@ class SearchViewModel @Inject constructor(
                 ) {
                     SearchedVideoPagingSource(
                         apiCall = {
-                            apiService.getVideosFromPlaylist(playlistId = playlistId, pageToken = it)
+                            apiService.getVideosFromPlaylist(
+                                playlistId = playlistId,
+                                pageToken = it
+                            )
                         },
                         map = { body: ApiResponse ->
-                                val items = body.items.filter { it.status?.privacyStatus == "public" }
-                                val videoIds =
-                                    items.mapNotNull { item -> item.snippet?.resourceId?.videoId }
-                                val map = getVideoInfo(videoIds)
-                                val videos = items.map {
-                                    val title = it.snippet?.title ?: ""
-                                    val id = it.snippet?.resourceId?.videoId ?: ""
+                            val items = body.items.filter { it.status?.privacyStatus == "public" }
+                            val videoIds =
+                                items.mapNotNull { item -> item.snippet?.resourceId?.videoId }
+                            val map = getVideoInfo(videoIds)
+                            val videos = items.map {
+                                val title = it.snippet?.title ?: ""
+                                val videoPublishedAt = it.contentDetails?.videoPublishedAt ?: ""
+                                val id = it.snippet?.resourceId?.videoId ?: ""
 
-                                    val thumbnailUrl = it.snippet?.thumbnails?.medium?.url ?: ""
-                                    val durationString = map[id]?.contentDetails?.duration ?: ""
-                                    val duration = Duration.parse(durationString).inWholeSeconds
-                                    val viewCount = map[id]?.statistics?.viewCount ?: ""
-                                    val likeCount = map[id]?.statistics?.likeCount ?: ""
-                                    val video = Video(
-                                        id = id + "_split_" + playlistId,
-                                        playlistId = playlistId,
-                                        title = title,
-                                        thumbnail = thumbnailUrl,
-                                        duration = duration,
-                                        progress = 0,
-                                        viewCount = if (viewCount.isEmpty()) "0" else getFormattedNumber(
-                                            viewCount.toLong()
-                                        ),
-                                        likeCount = if (likeCount.isEmpty()) "0" else getFormattedNumber(
-                                            likeCount.toLong()
-                                        )
+                                val thumbnailUrl = it.snippet?.thumbnails?.medium?.url ?: ""
+                                val durationString = map[id]?.contentDetails?.duration ?: ""
+                                val duration = Duration.parse(durationString).inWholeSeconds
+                                val viewCount = map[id]?.statistics?.viewCount ?: ""
+                                val likeCount = map[id]?.statistics?.likeCount ?: ""
+                                val video = Video(
+                                    id = id + "_split_" + playlistId,
+                                    playlistId = playlistId,
+                                    videoPublishedAt = videoPublishedAt,
+                                    title = title,
+                                    thumbnail = thumbnailUrl,
+                                    duration = duration,
+                                    progress = 0,
+                                    viewCount = if (viewCount.isEmpty()) "0" else getFormattedNumber(
+                                        viewCount.toLong()
+                                    ),
+                                    likeCount = if (likeCount.isEmpty()) "0" else getFormattedNumber(
+                                        likeCount.toLong()
                                     )
+                                )
 
-                                    video
-                                }
-                                videos
-                            },
-                            )
+                                video
+                            }
+                            videos
+                        },
+                    )
                 }.flow.cachedIn(viewModelScope)
             )
         }
@@ -377,17 +403,58 @@ class SearchViewModel @Inject constructor(
     }
 
     fun addNewPlaylist(playlist: Playlist) = viewModelScope.launch(Dispatchers.IO) {
-        playListDao.insertAll(playlist)
+        try {
+            playListDao.insertAll(playlist)
+        } catch (_: SQLiteConstraintException) {
+
+        }
     }
 
-    fun selectType(value: Int) {
-        selectedType = value
+    suspend fun isPlaylistAlreadyAdded(id: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            playListDao.getPlaylistById(id)
+        }
     }
 
     fun onQueryChange(value: String) {
         query = value
     }
 }
+
+fun getTimeAgo(context: Context, timestampStr: String): String {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+    dateFormat.timeZone = TimeZone.getTimeZone("GMT+6:00")
+
+    return try {
+        val timestamp = dateFormat.parse(timestampStr)?.time ?: 0
+        val currentTime = System.currentTimeMillis()
+
+        val timeDifference = currentTime - timestamp
+
+        val seconds = timeDifference / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+        val weeks = days / 7
+        val months = days / 30
+        val years = months / 12
+
+        when {
+            years > 0 -> context.resources.getQuantityString(R.plurals.time_ago_years, years.toInt(), years)
+            months > 0 -> context.resources.getQuantityString(R.plurals.time_ago_months, months.toInt(), months)
+            weeks > 0 -> context.resources.getQuantityString(R.plurals.time_ago_weeks, weeks.toInt(), weeks)
+            days > 0 -> context.resources.getQuantityString(R.plurals.time_ago_days, days.toInt(), days)
+            hours > 0 -> context.resources.getQuantityString(R.plurals.time_ago_hours, hours.toInt(), hours)
+            minutes > 0 -> context.resources.getQuantityString(R.plurals.time_ago_minutes, minutes.toInt(), minutes)
+            else -> context.getString(R.string.time_ago_just_now)
+        }
+    } catch (e: ParseException) {
+        e.printStackTrace()
+        // Return a fallback string or handle the error accordingly
+        "N/A"
+    }
+}
+
 
 fun getFormattedNumber(count: Long): String {
     if (count < 1000) return "" + count

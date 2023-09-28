@@ -1,6 +1,5 @@
 package com.example.youtubeapitesting.data.local
 
-import androidx.paging.PagingSource
 import androidx.room.*
 import com.example.youtubeapitesting.models.*
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +14,9 @@ interface PlayListDao {
 
     @Query("SELECT * FROM playlist p WHERE p.isTrash = true ORDER BY p.addedTime DESC")
     fun getTrashedPlaylist(): Flow<List<Playlist>>
+
+    @Query("SELECT 1 FROM playlist WHERE id=:id LIMIT 1")
+    fun getPlaylistById(id: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     fun insertAll(vararg playlist: Playlist)

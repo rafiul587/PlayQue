@@ -4,15 +4,17 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.example.youtubeapitesting.models.RemoteKey
+import org.jetbrains.annotations.NotNull
 
 @Dao
 interface RemoteKeyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrReplace(remoteKey: RemoteKey)
+    fun insertOrReplace(remoteKey: RemoteKey)
 
     @Query("SELECT * FROM remote_keys WHERE id = :videoId")
-    suspend fun remoteKeyByVideoId(videoId: String): RemoteKey
+    fun remoteKeyByVideoId(videoId: String): RemoteKey
 
     @Query("DELETE FROM remote_keys WHERE id = :videoId")
-    suspend fun deleteByVideoId(videoId: String)
+    fun deleteByVideoId(videoId: String)
 }

@@ -7,7 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface ApiService {
-    @GET("playlistItems?part=snippet,status&fields=nextPageToken,prevPageToken,items(status.privacyStatus,snippet.resourceId.videoId,snippet.title,snippet.thumbnails.medium.url)")
+    @GET("playlistItems?part=snippet,status,contentDetails&fields=nextPageToken,prevPageToken,items(status.privacyStatus,contentDetails.videoPublishedAt,snippet.resourceId.videoId,snippet.title,snippet.thumbnails.medium.url)")
     suspend fun getVideosFromPlaylist(@Query("playlistId") playlistId: String, @Query("pageToken") pageToken : String?): Response<ApiResponse>
     @GET("playlists?part=snippet%2CcontentDetails&fields=items(snippet.title,snippet.thumbnails.medium.url,snippet.channelTitle,contentDetails.itemCount)")
     suspend fun getPlaylist(@Query("id") playlistId: String): Response<ApiResponse>

@@ -1,4 +1,4 @@
-package com.example.youtubeapitesting
+package com.example.youtubeapitesting.navigation
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

@@ -1,13 +1,11 @@
 package com.example.youtubeapitesting.ui
 
-import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
@@ -28,16 +26,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.paging.compose.collectAsLazyPagingItems
-import com.example.youtubeapitesting.navigation.MenuItem
 import com.example.youtubeapitesting.R
 import com.example.youtubeapitesting.models.BottomNavItem
+import com.example.youtubeapitesting.navigation.MenuItem
 import com.example.youtubeapitesting.navigation.NavigationController
 import com.example.youtubeapitesting.navigation.Screens
-import com.example.youtubeapitesting.ui.screens.home.UrlInputLayout
 import com.example.youtubeapitesting.ui.screens.home.HomeViewModel
+import com.example.youtubeapitesting.ui.screens.home.UrlInputLayout
 import com.example.youtubeapitesting.ui.theme.YoutubeApiTestingTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -45,8 +43,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<HomeViewModel>()
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -62,6 +59,17 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val currentBackStack by navController.currentBackStackEntryAsState()
+                    Log.d("TAG", "onCreate: ${currentBackStack?.destination?.route}")
+                    val title = remember(currentBackStack?.destination?.route) {
+                        when (currentBackStack?.destination?.route) {
+                            Screens.SearchGraph.id -> "Search"
+                            Screens.Trash.id -> "Trash"
+                            Screens.SearchVideoListScreen.id + "/{playlist}" -> "Searched Videos"
+                            Screens.AddPlaylistScreen.id + "/{channel}" -> "Searched Playlists"
+                            Screens.AboutDeveloper.id -> "About Developer"
+                            else -> "Study Tube"
+                        }
+                    }
 
                     val isCurrentScreenHome =
                         currentBackStack?.destination?.route == Screens.Home.id
@@ -102,7 +110,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Text(
-                                        "StudyTube",
+                                        text = title,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -122,7 +130,6 @@ class MainActivity : ComponentActivity() {
                                 navController = navController
                             ) {}
                         }, bottomBar = {
-                            var selectedItem by remember { mutableStateOf(0) }
                             val items = remember {
                                 listOf(
                                     BottomNavItem(
@@ -132,7 +139,7 @@ class MainActivity : ComponentActivity() {
                                     ),
                                     BottomNavItem(
                                         "Search Channel",
-                                        Screens.Search.id,
+                                        Screens.SearchGraph.id,
                                         R.drawable.baseline_search_24
                                     ),
                                     BottomNavItem(
@@ -151,9 +158,18 @@ class MainActivity : ComponentActivity() {
                                         )
                                     },
                                         label = { Text(item.name) },
-                                        selected = item.route == currentBackStack?.destination?.route,
+                                        selected = item.route == currentBackStack?.destination?.route || item.route == currentBackStack?.destination?.parent?.route,
                                         onClick = {
-                                            navController.navigate(item.route)
+                                            navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    // Avoid multiple copies of the same destination when
+                                                    // reselecting the same item
+                                                    launchSingleTop = true
+                                                    // Restore state when reselecting a previously selected item
+                                                    restoreState = true
+                                            }
                                         })
                                 }
                             }

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.*
 import com.example.youtubeapitesting.data.local.AppDatabase
-import com.example.youtubeapitesting.data.local.RemoteKey
+import com.example.youtubeapitesting.models.RemoteKey
 import com.example.youtubeapitesting.data.local.VideoDao
 import com.example.youtubeapitesting.data.remote.ApiService
 import com.example.youtubeapitesting.data.remote.sources.VideoListRemoteMediator
@@ -30,16 +30,6 @@ class VideosViewModel @Inject constructor(
     private val appDatabase: AppDatabase,
     private val videoDao: VideoDao
 ) : ViewModel() {
-    /*private val _videos = MutableSharedFlow<PagingData<Video>>()
-    var errorMessage: String by mutableStateOf("")
-    val videos: Flow<PagingData<Video>>
-        get() = _videos
-    var state by mutableStateOf(ScreenState())
-
-    private val repository = com.example.youtubeapitesting.ui.screens.videos.VideoListPagingSource(apiService)
-    var paginator: DefaultPaginator<Int,ApiResponse>? = null*/
-
-    private var currentPlaylistId: String = ""
 
     private val _videos = MutableSharedFlow<PagingData<Video>>()
     val videos: Flow<PagingData<Video>> = _videos
@@ -67,9 +57,8 @@ class VideosViewModel @Inject constructor(
                             )
                             val videos = items.map {
                                 val title = it.snippet?.title ?: ""
+                                val videoPublishedAt = it.contentDetails?.videoPublishedAt ?: ""
                                 val id = it.snippet?.resourceId?.videoId ?: ""
-
-
                                 val thumbnailUrl = it.snippet?.thumbnails?.medium?.url ?: ""
                                 val durationString = map[id]?.contentDetails?.duration ?: ""
                                 val duration = Duration.parse(durationString).inWholeSeconds
@@ -78,6 +67,7 @@ class VideosViewModel @Inject constructor(
                                 val video = Video(
                                     id = id + "_split_" + playlistId,
                                     playlistId = playlistId,
+                                    videoPublishedAt = videoPublishedAt,
                                     title = title,
                                     thumbnail = thumbnailUrl,
                                     duration = duration,
@@ -94,7 +84,10 @@ class VideosViewModel @Inject constructor(
                             }
 
                             withContext(Dispatchers.IO) {
-                                videoDao.insertVideo(videos)
+                                try {
+                                    videoDao.insertVideo(videos)
+                                }catch (e: Exception){}
+
                             }
                             videos
                         },

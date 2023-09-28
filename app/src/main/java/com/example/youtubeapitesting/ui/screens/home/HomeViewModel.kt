@@ -1,5 +1,6 @@
 package com.example.youtubeapitesting.ui.screens.home
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,7 +15,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -64,9 +67,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun getActivePlaylists() = viewModelScope.launch(Dispatchers.IO) {
-        playListDao.getActivePlaylists().collectLatest {
-            _playlistInfo.value = it
-        }
+        _playlistInfo.emitAll(playListDao.getActivePlaylists())
     }
 
 
@@ -82,11 +83,3 @@ class HomeViewModel @Inject constructor(
         getActivePlaylists()
     }
 }
-
-data class ScreenState(
-    val isLoading: Boolean = false,
-    val items: List<PlaylistWithReminder> = emptyList(),
-    val error: String? = null,
-    val endReached: Boolean = false,
-    val page: Int = 0
-)

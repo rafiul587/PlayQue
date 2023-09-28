@@ -10,9 +10,11 @@ import retrofit2.Response
 
 class SearchChannelPagingSource(
     private val apiCall: suspend (String?) -> Response<SearchResponse>,
-    private val map: suspend (List<Items>) -> List<Channel>
+    private val query: String,
+    private val map: suspend (List<Items>) -> List<Channel>,
 ) : PagingSource<String, Channel>() {
     override suspend fun load(params: LoadParams<String>): LoadResult<String, Channel> {
+
         try {
             val nextPageToken = params.key
 

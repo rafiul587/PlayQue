@@ -1,9 +1,12 @@
 package com.example.youtubeapitesting.models
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity(foreignKeys = [ForeignKey(Playlist::class,
+    arrayOf("id"), arrayOf("playlistId"), onDelete = ForeignKey.CASCADE)]
+)
 data class Reminder(
     @PrimaryKey(autoGenerate = false)
     val playlistId: String,

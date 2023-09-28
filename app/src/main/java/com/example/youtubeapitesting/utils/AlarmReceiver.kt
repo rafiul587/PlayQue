@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.youtubeapitesting.R
+import com.example.youtubeapitesting.data.local.PlayListDao
 import com.example.youtubeapitesting.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -17,8 +18,7 @@ import javax.inject.Inject
 class AlarmReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var remindersManager: RemindersManager
-
+    lateinit var playlistDao: PlayListDao
     /**
      * sends notification when receives alarm
      * and then reschedule the reminder again
@@ -31,9 +31,9 @@ class AlarmReceiver : BroadcastReceiver() {
         ) as NotificationManager
 
         intent.extras?.let {
-            val videoTitle = it.getString("AlarmID")
+            val videoTitle = it.getString("title")
             Log.d("TAG", "onReceive: $videoTitle")
-            val channelTitle = "hjjhj"
+            val channelTitle = it.getString("channelTitle")
 
             notificationManager.sendReminderNotification(
                 applicationContext = context,
@@ -41,11 +41,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 videoTitle = videoTitle,
                 channelTitle = channelTitle
             )
-            // Remove this line if you don't want to reschedule the reminder
-            //remindersManager.startReminder(context.applicationContext)
         }
-
-
     }
 }
 

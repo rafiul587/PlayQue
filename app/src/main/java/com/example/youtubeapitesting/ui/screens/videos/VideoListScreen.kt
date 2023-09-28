@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.example.youtubeapitesting.R
 import com.example.youtubeapitesting.models.Video
 import com.example.youtubeapitesting.ui.YoutubePlayerActivity
+import com.example.youtubeapitesting.ui.screens.components.listStateHandler
 
 @Composable
 fun VideoListScreen(viewModel: VideosViewModel, playListId: String) {
@@ -44,20 +45,31 @@ fun VideoListScreen(viewModel: VideosViewModel, playListId: String) {
             .padding(horizontal = 6.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        items(
-            count = videos.itemCount,
-            key = videos.itemKey(),
-            contentType = videos.itemContentType()
-        ) { index ->
-            val item = videos[index]
-            item?.let { video ->
-                VideoRow(video = video, viewModel = viewModel, playListId = playListId) {
-                    val intent = Intent(context, YoutubePlayerActivity::class.java)
-                    intent.putExtra("videoId", item.id)
-                    context.startActivity(intent)
+        listStateHandler(
+            items = videos,
+            onSuccess = {
+                items(
+                    count = videos.itemCount
+                ) { index ->
+                    val item = videos[index]
+                    item?.let { video ->
+                        VideoRow(video = video, viewModel = viewModel, playListId = playListId) {
+                            val intent = Intent(context, YoutubePlayerActivity::class.java)
+                            intent.putExtra("videoId", item.id)
+                            intent.putExtra("progress", item.progress)
+                            context.startActivity(intent)
+                        }
+                    }
                 }
-            }
-        }
+            },
+            onError = {
+                videos.refresh()
+            },
+            onAppendError = {
+                videos.retry()
+            },
+            emptyMessage = "No public videos available"
+        )
     }
 }
 
@@ -130,6 +142,7 @@ fun VideoRow(
                     val context = LocalContext.current
                     IconButton(onClick = {
                         if (isComplete) {
+                            viewModel.updateVideo(video.copy(progress = 0))
                             Toast.makeText(context, "Incomplete", Toast.LENGTH_SHORT).show()
                         } else {
                             viewModel.updateVideo(video.copy(progress = video.duration))

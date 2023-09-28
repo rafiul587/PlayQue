@@ -85,6 +85,7 @@ data class Medium(
 )
 
 data class ContentDetails(
+    @SerializedName("videoPublishedAt") var videoPublishedAt: String? = null,
     @SerializedName("duration") var duration: String? = null,
     @SerializedName("itemCount") var itemCount: Int? = null
 )
