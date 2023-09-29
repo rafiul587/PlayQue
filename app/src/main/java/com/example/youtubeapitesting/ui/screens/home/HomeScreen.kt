@@ -194,11 +194,12 @@ fun PlayListOption(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val context = LocalContext.current
-        val list by rememberUpdatedState(
+        val selectedDaysList by rememberUpdatedState(
             newValue = generateWeekdays(
                 playlistWithReminder.rem?.daysMask ?: 0
             )
         )
+
         val dateFormatter = remember {
             SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         }
@@ -263,10 +264,10 @@ fun PlayListOption(
                 0 to "Sun", 1 to "Mon", 2 to "Tue", 3 to "Wed", 4 to "Thu", 5 to "Fri", 6 to "Sat"
             )
             val repetition by rememberUpdatedState {
-                if (list.size == 7) {
+                if (selectedDaysList.size == 7) {
                     "Everyday"
                 } else {
-                    list.map { mapOfDays[it] }.joinToString(
+                    selectedDaysList.map { mapOfDays[it] }.joinToString(
                         ","
                     )
                 }
@@ -313,7 +314,8 @@ fun PlayListOption(
                 scheduleAlarm(
                     context = context,
                     playlist = playlistWithReminder.list,
-                    days = list,
+                    days = generateWeekdays(daysMask),
+                    oldDays = selectedDaysList,
                     time = time,
                     startDate = startDate,
                     endDate = endDate
@@ -361,7 +363,7 @@ fun ReminderDialogContent(
     onRemindSet: (Long, Long, String, Long, Int) -> Unit,
     onDismiss: (Boolean) -> Unit
 ) {
-    var showPicker by remember { mutableStateOf(-1) }
+    var showPicker by remember { mutableIntStateOf(-1) }
 
     val cal = remember {
         Calendar.getInstance()
@@ -378,7 +380,8 @@ fun ReminderDialogContent(
         }
     }
     var selectedItem by remember {
-        mutableStateOf(playlistWithReminder.rem?.let { if (selectedItems.size == 7) 0 else 1 } ?: 0)
+        mutableIntStateOf(playlistWithReminder.rem?.let { if (selectedItems.size == 7) 0 else 1 }
+            ?: 0)
     }
     var date by remember {
         mutableStateOf(
@@ -391,6 +394,8 @@ fun ReminderDialogContent(
             }
         )
     }
+
+
     var time by remember {
         mutableStateOf(
             if (playlistWithReminder.rem == null) "" else timeFormatter.format(
@@ -467,27 +472,19 @@ fun ReminderDialogContent(
             DialogTitle(
                 onDismiss = onDismiss,
                 onSave = {
-                    val dateSplit = date.split("-")
-                    if (dateSplit.size > 1) {
-
-                        val start = dateToMilliseconds(dateSplit[0].trim())
-                        val end = dateToMilliseconds(dateSplit[1].trim())
-                        val timeMilliSec = timeToMilliseconds(time)
-                        if (start != null && end != null) {
-                            val daysMask = if (selectedItem == 0) {
-                                127
-                            } else {
-                                selectedItems.sumOf { 2.0.pow(it.toDouble()) }.toInt()
-                            }
-                            Log.d("TAG", "ReminderDialogContent: $start, $end, $daysMask")
-                            if (timeMilliSec != null) {
-                                onRemindSet(start, end, time, timeMilliSec, daysMask)
-                            } else timeError = "Wrong format! Use format hh:mm a"
-                        } else dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
-                    } else {
-                        dateError = "Wrong format! Use dd/MM/yyyy - dd/MM/yyyy"
-                    }
-
+                    saveReminder(
+                        date = date,
+                        time = time,
+                        selectedItem = selectedItem,
+                        selectedItems = selectedItems,
+                        onRemindSet = onRemindSet,
+                        onDateError = {
+                            dateError = it
+                        },
+                        onTimeError = {
+                            timeError = it
+                        }
+                    )
                 }
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -758,7 +755,7 @@ fun PlaylistOptionsDropDown(
         mutableStateOf(false)
     }
     var selectedItem by remember {
-        mutableStateOf(-1)
+        mutableIntStateOf(-1)
     }
 
     val (isReminderOn, onReminderChange) = remember {
@@ -836,6 +833,37 @@ fun MoveToTrashDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     })
 }
 
+fun saveReminder(
+    date: String,
+    time: String,
+    selectedItem: Int,
+    selectedItems: SnapshotStateList<Int>,
+    onRemindSet: (Long, Long, String, Long, Int) -> Unit,
+    onTimeError: (String) -> Unit,
+    onDateError: (String) -> Unit
+) {
+    val dateSplit = date.split("-")
+    if (dateSplit.size > 1) {
+
+        val start = dateToMilliseconds(dateSplit[0].trim())
+        val end = dateToMilliseconds(dateSplit[1].trim())
+        val timeMilliSec = timeToMilliseconds(time)
+        if (start != null && end != null) {
+            val daysMask = if (selectedItem == 0) {
+                127
+            } else {
+                selectedItems.sumOf { 2.0.pow(it.toDouble()) }.toInt()
+            }
+            Log.d("TAG", "ReminderDialogContent: $start, $end, $daysMask")
+            if (timeMilliSec != null) {
+                onRemindSet(start, end, time, timeMilliSec, daysMask)
+            } else onTimeError("Wrong format! Use format hh:mm a")
+        } else onDateError("Wrong format! Use dd/MM/yyyy - dd/MM/yyyy")
+    } else {
+        onDateError("Wrong format! Use dd/MM/yyyy - dd/MM/yyyy")
+    }
+}
+
 fun dateToMilliseconds(date: String): Long? {
     Log.d("TAG", "dateToMilliseconds: $date")
     val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -876,28 +904,30 @@ private fun scheduleAlarm(
     context: Context,
     playlist: Playlist,
     days: List<Int>,
+    oldDays: List<Int>,
     time: String,
     startDate: Long,
     endDate: Long
 ) {
-    val alarmIntent = Intent(context, AlarmReceiver::class.java)
-
-    alarmIntent.putExtra("playlistId", playlist.id)
-    alarmIntent.putExtra("title", playlist.title)
-    alarmIntent.putExtra("channelTitle", playlist.channelTitle)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        alarmIntent.identifier = playlist.id
-    } else alarmIntent.addCategory(playlist.id)
+    val alarmIntent = createAlarmIntent(context, playlist)
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-    Log.d("TAG", "scheduleAlarm: ${days},,,$time")
+
     val timeSplit = time.split(":", " ")
 
+    Log.d("TAG", "scheduleAlarm: $oldDays....$days")
+    cancelExistingAlarms(
+        context = context,
+        oldDays = oldDays,
+        alarmIntent = alarmIntent,
+        alarmManager = alarmManager
+    )
+    //Using 7 to indicate everyday since 0..6 is used for separate days.
     if (days.size == 7) {
         val alarmPI =
             PendingIntent.getBroadcast(context, 7, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
-        val calendar = setTimeInCalendar(0, startDate, timeSplit)
+        val calendar = setTimeInCalendar(7, startDate, timeSplit)
         val alarmSchedule = calendar.timeInMillis
-        if (alarmSchedule > endDate) {
+        if (alarmSchedule > (endDate + AlarmManager.INTERVAL_DAY)) {
             return
         }
         alarmManager?.setRepeating(
@@ -906,6 +936,7 @@ private fun scheduleAlarm(
             AlarmManager.INTERVAL_DAY,
             alarmPI
         )
+        return
     }
 
     days.forEach { day ->
@@ -916,7 +947,7 @@ private fun scheduleAlarm(
             val calendar = setTimeInCalendar(day, startDate, timeSplit)
 
             val alarmSchedule = calendar.timeInMillis
-            if (alarmSchedule > endDate) {
+            if (alarmSchedule > (endDate + AlarmManager.INTERVAL_DAY)) {
                 return@forEach
             }
             alarmManager?.setRepeating(
@@ -929,6 +960,37 @@ private fun scheduleAlarm(
     }
 }
 
+fun cancelExistingAlarms(
+    context: Context,
+    oldDays: List<Int>,
+    alarmIntent: Intent,
+    alarmManager: AlarmManager?
+) {
+    if (oldDays.size == 7) {
+        val alarmPI =
+            PendingIntent.getBroadcast(context, 7, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
+        alarmManager?.cancel(alarmPI)
+    } else {
+        oldDays.forEach {
+            val alarmPI =
+                PendingIntent.getBroadcast(context, it, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
+            alarmManager?.cancel(alarmPI)
+        }
+    }
+}
+
+fun createAlarmIntent(context: Context, playlist: Playlist): Intent {
+    val alarmIntent = Intent(context, AlarmReceiver::class.java)
+
+    alarmIntent.putExtra("playlistId", playlist.id)
+    alarmIntent.putExtra("title", playlist.title)
+    alarmIntent.putExtra("channelTitle", playlist.channelTitle)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        alarmIntent.identifier = playlist.id
+    } else alarmIntent.addCategory(playlist.id)
+    return alarmIntent
+}
+
 // Function to set the time in a Calendar instance
 fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calendar {
     val calendar = Calendar.getInstance(Locale.getDefault())
@@ -938,7 +1000,9 @@ fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calen
     calendar.firstDayOfWeek = Calendar.SUNDAY
     //day+1 because when select days from the list the index start from 0. i.e. 0 -> Sunday
     //but the days count in calendar start from 1.
-    calendar[Calendar.DAY_OF_WEEK] = day + 1
+    if (day != 7) {
+        calendar[Calendar.DAY_OF_WEEK] = day + 1
+    }
     calendar[Calendar.HOUR_OF_DAY] = if (timeSplit[2] == "PM") {
         timeSplit[0].toInt() + 12
     } else timeSplit[0].toInt()
@@ -946,7 +1010,7 @@ fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calen
     calendar[Calendar.SECOND] = 0
     // Check we aren't setting it in the past which would trigger it to fire instantly
     if (calendar.timeInMillis < System.currentTimeMillis()) {
-        calendar.add(Calendar.DAY_OF_YEAR, 7)
+        calendar.add(Calendar.DAY_OF_YEAR, if(day == 7) 1 else 7)
     }
     return calendar
 }

@@ -18,6 +18,9 @@ interface PlayListDao {
     @Query("SELECT 1 FROM playlist WHERE id=:id LIMIT 1")
     fun getPlaylistById(id: String): Boolean
 
+    @Query("SELECT * FROM reminder WHERE playlistId=:id")
+    fun getReminderByPlaylistId(id: String): Reminder
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     fun insertAll(vararg playlist: Playlist)
 
