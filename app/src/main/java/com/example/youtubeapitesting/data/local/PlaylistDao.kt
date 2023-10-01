@@ -28,6 +28,9 @@ interface PlayListDao {
     fun insertReminder(reminder: Reminder)
 
     @Update
+    fun updateReminderStatus(reminder: Reminder)
+
+    @Update
     fun updatePlaylist(playlist: Playlist)
 
     @Delete

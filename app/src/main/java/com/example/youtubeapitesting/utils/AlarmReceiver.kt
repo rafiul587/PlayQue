@@ -17,8 +17,6 @@ import com.example.youtubeapitesting.ui.MainActivity
 import com.example.youtubeapitesting.ui.screens.home.cancelExistingAlarms
 import com.example.youtubeapitesting.ui.screens.home.generateWeekdays
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.DayOfWeek
-import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -59,14 +57,12 @@ class AlarmReceiver : BroadcastReceiver() {
                 alarmIntent.identifier = playlistId
             } else alarmIntent.addCategory(playlistId)
 
-            val alarmManager =
-                context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             //Similar as currentTimeMillis + INTERVAL_DAY >= (endDate + INTERVAL_DAY) and INTERVAL_DAY * 7. Removed 1 INTERVAL_DAY from all sides. So it became INTERVAL_DAY * 6
             if (System.currentTimeMillis() >= endDate) {
-                cancelExistingAlarms(context, days, alarmIntent, alarmManager);
+                cancelExistingAlarms(context, days, alarmIntent);
             } else if (days.size != 7 && System.currentTimeMillis() + (INTERVAL_DAY * 6) >= endDate) {
                 Log.d("TAG", "onReceive: $alarmDay")
-                cancelExistingAlarms(context, listOf(alarmDay), alarmIntent, alarmManager )
+                cancelExistingAlarms(context, listOf(alarmDay), alarmIntent)
             }
         }
     }

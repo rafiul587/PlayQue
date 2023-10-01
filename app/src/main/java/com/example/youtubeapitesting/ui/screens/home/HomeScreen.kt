@@ -50,6 +50,7 @@ import com.example.youtubeapitesting.utils.AlarmReceiver
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.max
 import kotlin.math.pow
 
 
@@ -121,7 +122,9 @@ fun PlayLists(
     ) {
         items(playLists) {
             PlayListWithReminderRow(
-                playlistWithRem = it, onPlaylistClick = onPlayListClick, viewModel = viewModel
+                playlistWithRem = it,
+                onPlaylistClick = onPlayListClick,
+                viewModel = viewModel
             )
         }
     }
@@ -136,8 +139,9 @@ fun PlayListWithReminderRow(
     ElevatedCard {
         Column(modifier = Modifier.padding(16.dp)) {
             PlayListRow(playlist = playlistWithRem.list, onPlaylistClick = onPlaylistClick)
-            Divider(
-                modifier = Modifier.padding(top = 10.dp), color = Color.DarkGray, thickness = 1.dp
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 10.dp), thickness = 1.dp,
+                color = Color.DarkGray
             )
             PlayListOption(playlistWithReminder = playlistWithRem, viewModel = viewModel)
         }
@@ -203,6 +207,8 @@ fun PlayListOption(
         val dateFormatter = remember {
             SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         }
+
+        val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
 
         Box(
             modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center
@@ -297,7 +303,6 @@ fun PlayListOption(
                 }
             }
         }
-
         PlaylistOptionsDropDown(
             playlistWithReminder = playlistWithReminder,
             onRemindSet = { startDate, endDate, time, timeInMilisec, daysMask ->
@@ -325,7 +330,35 @@ fun PlayListOption(
                 viewModel.moveToTrash(
                     playlistWithReminder.list.copy(isTrash = true)
                 )
-            })
+            }
+        ) { value ->
+            playlistWithReminder.rem?.let {
+                viewModel.updateReminderStatus(it.copy(isEnabled = value))
+                if (value) {
+                    scheduleAlarm(
+                        context = context,
+                        playlist = playlistWithReminder.list,
+                        daysMask = it.daysMask,
+                        oldDays = listOf(),
+                        time = timeFormatter.format(it.time),
+                        endDate = it.endDate,
+                        startDate = it.startDate
+                    )
+                } else {
+                    val alarmIntent = createAlarmIntent(
+                        context = context,
+                        playlist = playlistWithReminder.list,
+                        daysMask = it.daysMask,
+                        endDate = it.endDate
+                    )
+                    cancelExistingAlarms(
+                        context = context,
+                        oldDays = generateWeekdays(it.daysMask),
+                        alarmIntent = alarmIntent
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -605,33 +638,7 @@ fun DatePickerDialog(
     }
     DatePickerDialog(onDismissRequest = {
         onShowDatePickerChange(-1)
-    }, confirmButton = {
-        /* TextButton(
-             onClick = {
-                 onConfirm(
-                     datePickerState.selectedStartDateMillis ?: 0L,
-                     datePickerState.selectedEndDateMillis ?: 0L
-                 )
-             },
-             enabled = confirmEnabled.value
-         ) {
-             Text(
-                 fontSize = 18.sp,
-                 text = "Set"
-             )
-         }*/
-    }, dismissButton = {
-        /*TextButton(
-            onClick = {
-                onShowDatePickerChange(-1)
-            }
-        ) {
-            Text(
-                fontSize = 18.sp,
-                text = "Cancel"
-            )
-        }*/
-    }) {
+    }, confirmButton = {}, dismissButton = {}) {
         DateRangePicker(state = datePickerState, title = {
             Row(
                 Modifier
@@ -739,7 +746,8 @@ fun DialogTitle(
 fun PlaylistOptionsDropDown(
     playlistWithReminder: PlaylistWithReminder,
     onRemindSet: (Long, Long, String, Long, Int) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onReminderStatusChange: (Boolean) -> Unit
 ) {
     val listItems = listOf(
         Pair("Add Reminder", Icons.Default.Notifications), Pair("Delete", Icons.Default.Delete)
@@ -752,9 +760,10 @@ fun PlaylistOptionsDropDown(
         mutableIntStateOf(-1)
     }
 
-    val (isReminderOn, onReminderChange) = remember {
-        mutableStateOf(false)
+    var isReminderOn by remember(playlistWithReminder.rem?.isEnabled) {
+        mutableStateOf(playlistWithReminder.rem?.isEnabled ?: false)
     }
+
     when (selectedItem) {
         0 -> ReminderDialog(
             playlistWithReminder = playlistWithReminder, onRemindSet = onRemindSet
@@ -793,11 +802,17 @@ fun PlaylistOptionsDropDown(
                 }, trailingIcon = {
                     if (index == 0) {
                         Spacer(modifier = Modifier.width(10.dp))
-                        Switch(
-                            modifier = Modifier.scale(.7f),
-                            checked = isReminderOn,
-                            onCheckedChange = onReminderChange
-                        )
+                        if (playlistWithReminder.rem != null) {
+                            Switch(
+                                modifier = Modifier.scale(.7f),
+                                checked = isReminderOn,
+                                onCheckedChange = {
+                                    isReminderOn = !isReminderOn
+                                    onReminderStatusChange(it)
+                                }
+                            )
+
+                        }
                     }
                 }, text = {
                     Text(text = value.first)
@@ -907,12 +922,11 @@ private fun scheduleAlarm(
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
 
     val daysList = generateWeekdays(daysMask)
-    Log.d("TAG", "scheduleAlarm: $oldDays....$daysList")
+    Log.d("TAG", "scheduleAlarm: $daysMask....$daysList")
     cancelExistingAlarms(
         context = context,
         oldDays = oldDays,
         alarmIntent = alarmIntent,
-        alarmManager = alarmManager
     )
     //Using 7 to indicate everyday since 0..6 is used for separate days.
     if (daysList.size == 7) {
@@ -933,7 +947,7 @@ private fun scheduleAlarm(
     }
 
     daysList.forEach { day ->
-        Log.d("TAG", "scheduleAlarm: $day")
+        Log.d("TAG", "scheduleAlarm: $startDate, $time")
         alarmIntent.putExtra("day", day)
         val alarmPI =
             PendingIntent.getBroadcast(context, day, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
@@ -958,8 +972,8 @@ fun cancelExistingAlarms(
     context: Context,
     oldDays: List<Int>,
     alarmIntent: Intent,
-    alarmManager: AlarmManager?
 ) {
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
     if (oldDays.size == 7) {
         val alarmPI =
             PendingIntent.getBroadcast(context, 7, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
@@ -993,7 +1007,7 @@ fun setTimeInCalendar(day: Int, startDate: Long, time: String): Calendar {
     val calendar = Calendar.getInstance(Locale.getDefault())
 
     val timeSplit = convertTo24HourFormat(time).split(":")
-    calendar.timeInMillis = startDate
+    calendar.timeInMillis = max(startDate, System.currentTimeMillis())
     //Setting Sunday as the first day of the week so that it stays consistent for any locale.
     //So now for sunday always DAY_OF_WEEK = 1
     calendar.firstDayOfWeek = Calendar.SUNDAY
