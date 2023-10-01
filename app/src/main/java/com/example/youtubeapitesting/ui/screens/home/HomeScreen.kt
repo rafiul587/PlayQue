@@ -314,7 +314,7 @@ fun PlayListOption(
                 scheduleAlarm(
                     context = context,
                     playlist = playlistWithReminder.list,
-                    days = generateWeekdays(daysMask),
+                    daysMask = daysMask,
                     oldDays = selectedDaysList,
                     time = time,
                     startDate = startDate,
@@ -406,16 +406,10 @@ fun ReminderDialogContent(
 
 
     val timePickerState = if (playlistWithReminder.rem == null) rememberTimePickerState() else {
-        val timeSplit by rememberUpdatedState(time.split(" "))
+        val timeSplit by rememberUpdatedState(convertTo24HourFormat(time).split(":"))
 
-        val hour by rememberUpdatedState(
-            if (timeSplit[1] == "PM") {
-                timeSplit[0].split(":")[0].toInt() + 12
-            } else timeSplit[0].split(":")[0].toInt()
-        )
-        val minute by rememberUpdatedState(
-            time.split(" ")[0].split(":")[1].toInt()
-        )
+        val hour by rememberUpdatedState(timeSplit[0].toInt())
+        val minute by rememberUpdatedState(timeSplit[1].toInt())
         rememberTimePickerState(
             initialHour = hour, initialMinute = minute
         )
@@ -903,18 +897,17 @@ fun generateWeekdays(mask: Int): List<Int> {
 private fun scheduleAlarm(
     context: Context,
     playlist: Playlist,
-    days: List<Int>,
+    daysMask: Int,
     oldDays: List<Int>,
     time: String,
     startDate: Long,
     endDate: Long
 ) {
-    val alarmIntent = createAlarmIntent(context, playlist)
+    val alarmIntent = createAlarmIntent(context, playlist, daysMask, endDate)
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
 
-    val timeSplit = time.split(":", " ")
-
-    Log.d("TAG", "scheduleAlarm: $oldDays....$days")
+    val daysList = generateWeekdays(daysMask)
+    Log.d("TAG", "scheduleAlarm: $oldDays....$daysList")
     cancelExistingAlarms(
         context = context,
         oldDays = oldDays,
@@ -922,10 +915,10 @@ private fun scheduleAlarm(
         alarmManager = alarmManager
     )
     //Using 7 to indicate everyday since 0..6 is used for separate days.
-    if (days.size == 7) {
+    if (daysList.size == 7) {
         val alarmPI =
             PendingIntent.getBroadcast(context, 7, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
-        val calendar = setTimeInCalendar(7, startDate, timeSplit)
+        val calendar = setTimeInCalendar(7, startDate, time)
         val alarmSchedule = calendar.timeInMillis
         if (alarmSchedule > (endDate + AlarmManager.INTERVAL_DAY)) {
             return
@@ -939,24 +932,25 @@ private fun scheduleAlarm(
         return
     }
 
-    days.forEach { day ->
+    daysList.forEach { day ->
+        Log.d("TAG", "scheduleAlarm: $day")
+        alarmIntent.putExtra("day", day)
         val alarmPI =
             PendingIntent.getBroadcast(context, day, alarmIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        if (timeSplit.size > 2) {
-            val calendar = setTimeInCalendar(day, startDate, timeSplit)
+        val calendar = setTimeInCalendar(day, startDate, time)
 
-            val alarmSchedule = calendar.timeInMillis
-            if (alarmSchedule > (endDate + AlarmManager.INTERVAL_DAY)) {
-                return@forEach
-            }
-            alarmManager?.setRepeating(
-                AlarmManager.RTC_WAKEUP,
-                alarmSchedule,
-                AlarmManager.INTERVAL_DAY * 7,
-                alarmPI
-            )
+        val alarmSchedule = calendar.timeInMillis
+        //endDate == 00:00 so but it has to be 11:59. That's why endDate + INTERVAL_DAY
+        if (alarmSchedule > (endDate + AlarmManager.INTERVAL_DAY)) {
+            return@forEach
         }
+        alarmManager?.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            alarmSchedule,
+            AlarmManager.INTERVAL_DAY * 7,
+            alarmPI
+        )
     }
 }
 
@@ -979,12 +973,15 @@ fun cancelExistingAlarms(
     }
 }
 
-fun createAlarmIntent(context: Context, playlist: Playlist): Intent {
+fun createAlarmIntent(context: Context, playlist: Playlist, daysMask: Int, endDate: Long): Intent {
     val alarmIntent = Intent(context, AlarmReceiver::class.java)
 
     alarmIntent.putExtra("playlistId", playlist.id)
     alarmIntent.putExtra("title", playlist.title)
     alarmIntent.putExtra("channelTitle", playlist.channelTitle)
+    alarmIntent.putExtra("daysMask", daysMask)
+    alarmIntent.putExtra("endDate", endDate)
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         alarmIntent.identifier = playlist.id
     } else alarmIntent.addCategory(playlist.id)
@@ -992,8 +989,10 @@ fun createAlarmIntent(context: Context, playlist: Playlist): Intent {
 }
 
 // Function to set the time in a Calendar instance
-fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calendar {
+fun setTimeInCalendar(day: Int, startDate: Long, time: String): Calendar {
     val calendar = Calendar.getInstance(Locale.getDefault())
+
+    val timeSplit = convertTo24HourFormat(time).split(":")
     calendar.timeInMillis = startDate
     //Setting Sunday as the first day of the week so that it stays consistent for any locale.
     //So now for sunday always DAY_OF_WEEK = 1
@@ -1003,16 +1002,27 @@ fun setTimeInCalendar(day: Int, startDate: Long, timeSplit: List<String>): Calen
     if (day != 7) {
         calendar[Calendar.DAY_OF_WEEK] = day + 1
     }
-    calendar[Calendar.HOUR_OF_DAY] = if (timeSplit[2] == "PM") {
-        timeSplit[0].toInt() + 12
-    } else timeSplit[0].toInt()
+    Log.d("TAG", "setTimeInCalendar: ${timeSplit[0]}, ${timeSplit[1]}")
+    calendar[Calendar.HOUR_OF_DAY] = timeSplit[0].toInt()
     calendar[Calendar.MINUTE] = timeSplit[1].toInt()
     calendar[Calendar.SECOND] = 0
     // Check we aren't setting it in the past which would trigger it to fire instantly
     if (calendar.timeInMillis < System.currentTimeMillis()) {
-        calendar.add(Calendar.DAY_OF_YEAR, if(day == 7) 1 else 7)
+        calendar.add(Calendar.DAY_OF_YEAR, if (day == 7) 1 else 7)
     }
     return calendar
+}
+
+fun convertTo24HourFormat(time12Hour: String): String {
+    val inputFormat = SimpleDateFormat("hh:mm a", Locale.US)
+    val outputFormat = SimpleDateFormat("HH:mm", Locale.US)
+    try {
+        val date = inputFormat.parse(time12Hour)
+        return outputFormat.format(date)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return "00:00"
 }
 
 

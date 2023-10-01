@@ -1,6 +1,7 @@
 package com.example.youtubeapitesting.utils
 
 import android.app.AlarmManager
+import android.app.AlarmManager.INTERVAL_DAY
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -16,6 +17,8 @@ import com.example.youtubeapitesting.ui.MainActivity
 import com.example.youtubeapitesting.ui.screens.home.cancelExistingAlarms
 import com.example.youtubeapitesting.ui.screens.home.generateWeekdays
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.DayOfWeek
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -37,31 +40,33 @@ class AlarmReceiver : BroadcastReceiver() {
 
         intent.extras?.let {
             val videoTitle = it.getString("title")
-            Log.d("TAG", "onReceive: $videoTitle")
             val channelTitle = it.getString("channelTitle")
-            val playlistId = it.getString("playlistId")
 
-            playlistId?.let {
-                val reminder = playlistDao.getReminderByPlaylistId(it)
-                val endDate = reminder.endDate
+            notificationManager.sendReminderNotification(
+                applicationContext = context,
+                channelId = context.getString(R.string.reminders_notification_channel_id),
+                videoTitle = videoTitle,
+                channelTitle = channelTitle
+            )
+            val playlistId = it.getString("playlistId", "")
+            val daysMask = it.getInt("daysMask")
+            val alarmDay = it.getInt("day")
+            val endDate = it.getLong("endDate")
+            val days = generateWeekdays(daysMask)
 
-                if (System.currentTimeMillis() >= endDate + AlarmManager.INTERVAL_DAY) {
-                    val alarmIntent = Intent(context, AlarmReceiver::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        alarmIntent.identifier = it
-                    } else alarmIntent.addCategory(it)
-                    val alarmManager =
-                        context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-                    val days = generateWeekdays(reminder.daysMask)
-                    cancelExistingAlarms(context, days, alarmIntent, alarmManager)
-                } else {
-                    notificationManager.sendReminderNotification(
-                        applicationContext = context,
-                        channelId = context.getString(R.string.reminders_notification_channel_id),
-                        videoTitle = videoTitle,
-                        channelTitle = channelTitle
-                    )
-                }
+            val alarmIntent = Intent(context, AlarmReceiver::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                alarmIntent.identifier = playlistId
+            } else alarmIntent.addCategory(playlistId)
+
+            val alarmManager =
+                context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            //Similar as currentTimeMillis + INTERVAL_DAY >= (endDate + INTERVAL_DAY) and INTERVAL_DAY * 7. Removed 1 INTERVAL_DAY from all sides. So it became INTERVAL_DAY * 6
+            if (System.currentTimeMillis() >= endDate) {
+                cancelExistingAlarms(context, days, alarmIntent, alarmManager);
+            } else if (days.size != 7 && System.currentTimeMillis() + (INTERVAL_DAY * 6) >= endDate) {
+                Log.d("TAG", "onReceive: $alarmDay")
+                cancelExistingAlarms(context, listOf(alarmDay), alarmIntent, alarmManager )
             }
         }
     }
