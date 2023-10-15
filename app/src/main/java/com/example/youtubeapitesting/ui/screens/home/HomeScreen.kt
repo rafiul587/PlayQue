@@ -143,6 +143,7 @@ fun PlayListWithReminderRow(
                 modifier = Modifier.padding(top = 10.dp), thickness = 1.dp,
                 color = Color.DarkGray
             )
+            Spacer(modifier = Modifier.height(5.dp))
             PlayListOption(playlistWithReminder = playlistWithRem, viewModel = viewModel)
         }
     }
@@ -154,7 +155,9 @@ fun PlayListRow(playlist: Playlist, onPlaylistClick: (String) -> Unit) {
         Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .clickable { onPlaylistClick(playlist.id) }) {
+            .clickable { onPlaylistClick(playlist.id) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         if (playlist.thumbnail.isNotEmpty()) {
             AsyncImage(
                 model = playlist.thumbnail,
@@ -178,11 +181,47 @@ fun PlayListRow(playlist: Playlist, onPlaylistClick: (String) -> Unit) {
                 color = MaterialTheme.colorScheme.onTertiary
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${playlist.itemCount} videos",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onTertiary
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             )
+            {
+                val progress =
+                    if (playlist.itemCount > 0) (playlist.itemComplete / playlist.itemCount.toFloat()) else 0f
+
+                LinearProgressIndicator(
+                    modifier = Modifier.weight(1f),
+                    progress = progress,
+                    trackColor = Color.DarkGray,
+                    strokeCap = StrokeCap.Round
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text(
+                    text = "${playlist.itemComplete}/${playlist.itemCount} videos",
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                /*Box(
+                    modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center
+                ) {
+                   
+                    Text(
+                        modifier = Modifier.padding(4.dp),
+                        text = "${(progress * 100).roundToInt()}%",
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }*/
+
+                /*Text(
+                    text = "${playlist.itemCount} videos",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onTertiary
+                )*/
+            }
         }
     }
 }
@@ -194,9 +233,9 @@ fun PlayListOption(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         val context = LocalContext.current
         val selectedDaysList by rememberUpdatedState(
             newValue = generateWeekdays(
@@ -204,107 +243,68 @@ fun PlayListOption(
             )
         )
 
-        val dateFormatter = remember {
-            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        }
-
         val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
 
-        Box(
-            modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center
-        ) {
-            val progress =
-                if (playlistWithReminder.list.itemCount > 0) (playlistWithReminder.list.itemComplete / playlistWithReminder.list.itemCount.toFloat()) else 0f
-            CircularProgressIndicator(
-                modifier = Modifier.fillMaxSize(),
-                progress = progress,
-                strokeWidth = 3.dp,
-                trackColor = Color.DarkGray,
-                strokeCap = StrokeCap.Round
-            )
-            Text(
-                modifier = Modifier.padding(7.dp),
-                text = "${playlistWithReminder.list.itemComplete}/${playlistWithReminder.list.itemCount}",
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center
-            )
+        var isReminderOn by remember(playlistWithReminder.rem?.isEnabled) {
+            mutableStateOf(playlistWithReminder.rem?.isEnabled ?: false)
         }
 
-        if (playlistWithReminder.rem == null || !playlistWithReminder.rem.isEnabled) {
-            val addedDate by rememberUpdatedState(dateFormatter.format(playlistWithReminder.list.addedTime))
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Row {
-                    Text(text = "Added: $addedDate")
-                }
-                CompositionLocalProvider(
-                    LocalTextStyle provides TextStyle.Default.copy(
-                        color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
-                    )
-                ) {
-                    Text(text = "No Reminder Set")
-                }
-            }
+        if (playlistWithReminder.rem == null) {
+            ReminderAdded(
+                modifier = Modifier.weight(1f),
+                playlistWithReminder = playlistWithReminder
+            )
         } else {
-            val timeFormatter = remember {
-                SimpleDateFormat("hh:mm a", Locale.getDefault())
-            }
-            val startDate by rememberUpdatedState(
-                dateFormatter.format(
-                    playlistWithReminder.rem.startDate
-                )
+            ReminderColumn(
+                modifier = Modifier.weight(1f),
+                reminder = playlistWithReminder.rem,
+                selectedDaysList = selectedDaysList
             )
-            val endDate by rememberUpdatedState(
-                dateFormatter.format(
-                    playlistWithReminder.rem.endDate
-                )
-            )
-            val time by rememberUpdatedState(
-                timeFormatter.format(
-                    playlistWithReminder.rem.time
-                )
-            )
-            val mapOfDays = mapOf(
-                0 to "Sun", 1 to "Mon", 2 to "Tue", 3 to "Wed", 4 to "Thu", 5 to "Fri", 6 to "Sat"
-            )
-            val repetition by rememberUpdatedState {
-                if (selectedDaysList.size == 7) {
-                    "Everyday"
-                } else {
-                    selectedDaysList.map { mapOfDays[it] }.joinToString(
-                        ","
-                    )
-                }
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Row {
+            Spacer(modifier = Modifier.width(5.dp))
 
-                    Text(text = startDate)
-                    Text(
-                        modifier = Modifier.padding(horizontal = 8.dp), text = "-"
-                    )
-                    Text(text = endDate)
-
-                }
-                Row {
-                    CompositionLocalProvider(
-                        LocalTextStyle provides TextStyle.Default.copy(
-                            color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
-                        )
-                    ) {
-                        Text(text = repetition())
-                        Text(text = " - $time")
+            Switch(
+                modifier = Modifier
+                    .scale(.7f)
+                    .size(36.dp),
+                checked = isReminderOn,
+                onCheckedChange = { isChecked ->
+                    isReminderOn = !isReminderOn
+                    playlistWithReminder.rem.also {
+                        viewModel.updateReminderStatus(it.copy(isEnabled = isChecked))
+                        if (isChecked) {
+                            scheduleAlarm(
+                                context = context,
+                                playlist = playlistWithReminder.list,
+                                daysMask = it.daysMask,
+                                oldDays = listOf(),
+                                time = timeFormatter.format(it.time),
+                                endDate = it.endDate,
+                                startDate = it.startDate
+                            )
+                        } else {
+                            val alarmIntent = createAlarmIntent(
+                                context = context,
+                                playlist = playlistWithReminder.list,
+                                daysMask = it.daysMask,
+                                endDate = it.endDate
+                            )
+                            cancelExistingAlarms(
+                                context = context,
+                                oldDays = generateWeekdays(it.daysMask),
+                                alarmIntent = alarmIntent
+                            )
+                        }
                     }
                 }
-            }
+            )
+            Spacer(modifier = Modifier.width(5.dp))
         }
+
         PlaylistOptionsDropDown(
+            modifier = Modifier
+                .size(36.dp),
             playlistWithReminder = playlistWithReminder,
+
             onRemindSet = { startDate, endDate, time, timeInMilisec, daysMask ->
                 viewModel.saveReminder(
                     Reminder(
@@ -326,38 +326,111 @@ fun PlayListOption(
                     endDate = endDate
                 )
             },
-            onDelete = {
+            onPlaylistDelete = {
                 viewModel.moveToTrash(
                     playlistWithReminder.list.copy(isTrash = true)
                 )
+            },
+            onReminderDelete = {
+                playlistWithReminder.rem?.let { viewModel.deleteReminder(it) }
             }
-        ) { value ->
-            playlistWithReminder.rem?.let {
-                viewModel.updateReminderStatus(it.copy(isEnabled = value))
-                if (value) {
-                    scheduleAlarm(
-                        context = context,
-                        playlist = playlistWithReminder.list,
-                        daysMask = it.daysMask,
-                        oldDays = listOf(),
-                        time = timeFormatter.format(it.time),
-                        endDate = it.endDate,
-                        startDate = it.startDate
-                    )
-                } else {
-                    val alarmIntent = createAlarmIntent(
-                        context = context,
-                        playlist = playlistWithReminder.list,
-                        daysMask = it.daysMask,
-                        endDate = it.endDate
-                    )
-                    cancelExistingAlarms(
-                        context = context,
-                        oldDays = generateWeekdays(it.daysMask),
-                        alarmIntent = alarmIntent
-                    )
-                }
+        )
+
+    }
+}
+
+@Composable
+fun ReminderColumn(
+    modifier: Modifier,
+    reminder: Reminder,
+    selectedDaysList: List<Int>
+) {
+    val timeFormatter = remember {
+        SimpleDateFormat("hh:mm a", Locale.getDefault())
+    }
+
+    val dateFormatter = remember {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    }
+
+    val startDate by rememberUpdatedState(
+        dateFormatter.format(
+            reminder.startDate
+        )
+    )
+    val endDate by rememberUpdatedState(
+        dateFormatter.format(
+            reminder.endDate
+        )
+    )
+    val time by rememberUpdatedState(
+        timeFormatter.format(
+            reminder.time
+        )
+    )
+    val mapOfDays = mapOf(
+        0 to "Sun", 1 to "Mon", 2 to "Tue", 3 to "Wed", 4 to "Thu", 5 to "Fri", 6 to "Sat"
+    )
+    val repetition by rememberUpdatedState {
+        if (selectedDaysList.size == 7) {
+            "Everyday"
+        } else {
+            selectedDaysList.map { mapOfDays[it] }.joinToString(
+                ","
+            )
+        }
+    }
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Row {
+
+            Text(text = startDate)
+            Text(
+                modifier = Modifier.padding(horizontal = 8.dp), text = "-"
+            )
+            Text(text = endDate)
+
+        }
+        Row {
+            CompositionLocalProvider(
+                LocalTextStyle provides TextStyle.Default.copy(
+                    color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
+                )
+            ) {
+                Text(text = repetition())
+                Text(text = " - $time")
             }
+        }
+    }
+}
+
+@Composable
+fun ReminderAdded(
+    modifier: Modifier,
+    playlistWithReminder: PlaylistWithReminder
+) {
+    val dateFormatter = remember {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    }
+
+    val addedDate by rememberUpdatedState(dateFormatter.format(playlistWithReminder.list.addedTime))
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Row {
+            Text(text = "Added: $addedDate")
+        }
+        CompositionLocalProvider(
+            LocalTextStyle provides TextStyle.Default.copy(
+                color = MaterialTheme.colorScheme.onTertiary, fontSize = 13.sp
+            )
+        ) {
+            Text(text = "No Reminder Set")
         }
     }
 }
@@ -366,7 +439,9 @@ fun PlayListOption(
 fun ReminderDialog(
     playlistWithReminder: PlaylistWithReminder,
     onRemindSet: (Long, Long, String, Long, Int) -> Unit,
+    onReminderDelete: () -> Unit,
     onDismiss: (Boolean) -> Unit
+
 ) {
 
     Dialog(
@@ -384,6 +459,7 @@ fun ReminderDialog(
         ReminderDialogContent(
             playlistWithReminder = playlistWithReminder,
             onRemindSet = onRemindSet,
+            onReminderDelete = onReminderDelete,
             onDismiss = onDismiss
         )
     }
@@ -394,6 +470,7 @@ fun ReminderDialog(
 fun ReminderDialogContent(
     playlistWithReminder: PlaylistWithReminder,
     onRemindSet: (Long, Long, String, Long, Int) -> Unit,
+    onReminderDelete: () -> Unit,
     onDismiss: (Boolean) -> Unit
 ) {
     var showPicker by remember { mutableIntStateOf(-1) }
@@ -498,6 +575,7 @@ fun ReminderDialogContent(
         ) {
             DialogTitle(
                 onDismiss = onDismiss,
+                onReminderDelete = onReminderDelete,
                 onSave = {
                     saveReminder(
                         date = date,
@@ -512,7 +590,8 @@ fun ReminderDialogContent(
                             timeError = it
                         }
                     )
-                }
+                },
+                reminder = playlistWithReminder.rem
             )
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -565,6 +644,22 @@ fun ReminderDialogContent(
             NotificationRepeatContainer(
                 selectedItem = selectedItem, selectedItems = selectedItems
             ) { selectedItem = it }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .align(Alignment.CenterHorizontally),
+                onClick = {
+                    onReminderDelete()
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+            ) {
+                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = "Delete Reminder")
+            }
         }
     }
 }
@@ -716,7 +811,10 @@ fun TimePickerDialog(
 
 @Composable
 fun DialogTitle(
-    onDismiss: (Boolean) -> Unit, onSave: () -> Unit
+    onDismiss: (Boolean) -> Unit,
+    onReminderDelete: () -> Unit,
+    onSave: () -> Unit,
+    reminder: Reminder?,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -729,6 +827,20 @@ fun DialogTitle(
         Text(
             text = "Add Reminder", fontWeight = FontWeight.Black, fontSize = 18.sp
         )
+
+        Log.d("TAG", "DialogTitle: $reminder")
+
+        if (reminder != null) {
+            IconButton(
+                onClick = {
+                    onReminderDelete()
+                    onDismiss(false)
+                },
+                colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFE57373))
+            ) {
+                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+            }
+        }
         Button(
             onClick = {
                 onSave()
@@ -744,13 +856,17 @@ fun DialogTitle(
 
 @Composable
 fun PlaylistOptionsDropDown(
+    modifier: Modifier,
     playlistWithReminder: PlaylistWithReminder,
     onRemindSet: (Long, Long, String, Long, Int) -> Unit,
-    onDelete: () -> Unit,
-    onReminderStatusChange: (Boolean) -> Unit
+    onPlaylistDelete: () -> Unit,
+    onReminderDelete: () -> Unit
 ) {
     val listItems = listOf(
-        Pair("Add Reminder", Icons.Default.Notifications), Pair("Delete", Icons.Default.Delete)
+        Pair(
+            if (playlistWithReminder.rem == null) "Add Reminder" else "Edit Reminder",
+            Icons.Default.Notifications
+        ), Pair("Delete", Icons.Default.Delete)
     )
 
     var expanded by remember {
@@ -760,24 +876,23 @@ fun PlaylistOptionsDropDown(
         mutableIntStateOf(-1)
     }
 
-    var isReminderOn by remember(playlistWithReminder.rem?.isEnabled) {
-        mutableStateOf(playlistWithReminder.rem?.isEnabled ?: false)
-    }
-
     when (selectedItem) {
         0 -> ReminderDialog(
-            playlistWithReminder = playlistWithReminder, onRemindSet = onRemindSet
+            playlistWithReminder = playlistWithReminder,
+            onRemindSet = onRemindSet,
+            onReminderDelete = onReminderDelete,
         ) {
             selectedItem = -1
         }
 
         1 -> {
             MoveToTrashDialog(onDismiss = { selectedItem = -1 }) {
-                onDelete()
+                onPlaylistDelete()
             }
         }
     }
     Box(
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         IconButton(onClick = {
@@ -799,21 +914,6 @@ fun PlaylistOptionsDropDown(
                     expanded = false
                 }, leadingIcon = {
                     Icon(imageVector = value.second, contentDescription = "Item Icon")
-                }, trailingIcon = {
-                    if (index == 0) {
-                        Spacer(modifier = Modifier.width(10.dp))
-                        if (playlistWithReminder.rem != null) {
-                            Switch(
-                                modifier = Modifier.scale(.7f),
-                                checked = isReminderOn,
-                                onCheckedChange = {
-                                    isReminderOn = !isReminderOn
-                                    onReminderStatusChange(it)
-                                }
-                            )
-
-                        }
-                    }
                 }, text = {
                     Text(text = value.first)
                 })
