@@ -72,6 +72,10 @@ class HomeViewModel @Inject constructor(
         playListDao.insertReminder(reminder = reminder)
     }
 
+    fun deleteReminder(reminder: Reminder) = viewModelScope.launch(Dispatchers.IO) {
+        playListDao.deleteReminder(reminder = reminder)
+    }
+
     fun updateReminderStatus(reminder: Reminder) = viewModelScope.launch(Dispatchers.IO) {
         playListDao.updateReminderStatus(reminder)
     }

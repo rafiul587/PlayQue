@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -646,20 +647,36 @@ fun ReminderDialogContent(
             ) { selectedItem = it }
 
             Spacer(modifier = Modifier.height(20.dp))
-            Button(
-                modifier = Modifier
-                    .wrapContentSize()
-                    .align(Alignment.CenterHorizontally),
-                onClick = {
-                    onReminderDelete()
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+            /*Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(30.dp)
             ) {
-                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Delete Reminder")
-            }
+                Button(
+                    modifier = Modifier
+                        .weight(1f),
+                    onClick = {
+                        onReminderDelete()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+                ) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = "Delete")
+                }
+                Button(
+                    modifier = Modifier
+                        .weight(1f),
+                    onClick = {
+                        onReminderDelete()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = "Save")
+                }
+            }*/
         }
     }
 }
@@ -818,29 +835,42 @@ fun DialogTitle(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = { onDismiss(false) }) {
             Icon(imageVector = Icons.Default.Clear, contentDescription = "Cancel")
         }
+
         Text(
-            text = "Add Reminder", fontWeight = FontWeight.Black, fontSize = 18.sp
+            modifier = Modifier.weight(1f).padding(8.dp),
+            text = "Add Reminder", fontWeight = FontWeight.Black, fontSize = 18.sp,
         )
 
         Log.d("TAG", "DialogTitle: $reminder")
 
         if (reminder != null) {
-            IconButton(
+            FilledIconButton(
                 onClick = {
                     onReminderDelete()
                     onDismiss(false)
                 },
-                colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFE57373))
+                shape = CircleShape,
+                colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFE57373), contentColor = Color.White,)
             ) {
                 Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
             }
+            Spacer(modifier = Modifier.width(16.dp))
         }
+        /*Button(
+            modifier = Modifier.padding(end = 4.dp),
+            onClick = {
+                onReminderDelete()
+                onDismiss(false)
+            },
+            shape = CircleShape,
+        ) {
+            Icon(imageVector = Icons.Default.Check, contentDescription = "Delete")
+        }*/
         Button(
             onClick = {
                 onSave()

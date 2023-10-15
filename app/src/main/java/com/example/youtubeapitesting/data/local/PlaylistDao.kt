@@ -27,6 +27,9 @@ interface PlayListDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertReminder(reminder: Reminder)
 
+    @Delete
+    fun deleteReminder(reminder: Reminder)
+
     @Update
     fun updateReminderStatus(reminder: Reminder)
 
