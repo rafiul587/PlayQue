@@ -62,7 +62,7 @@ fun NavigationController(
             }
             navigation(
                 startDestination = Screens.Search.id,
-                route = "Search_nav_graph"
+                route = Screens.SearchGraph.id
             ){
                 composable(route = Screens.Search.id) {
                     val viewModel = hiltViewModel<SearchViewModel>()

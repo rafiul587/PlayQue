@@ -11,6 +11,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.rounded.Add
@@ -104,10 +106,25 @@ class MainActivity : ComponentActivity() {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.baseline_ondemand_video_24),
-                                        contentDescription = "Logo"
-                                    )
+
+                                    if (navController.currentDestination!= null && navController.currentDestination?.route != Screens.Home.id && navController.currentDestination?.route != Screens.Search.id &&
+                                        navController.currentDestination?.route != Screens.Trash.id
+                                    ) {
+                                        IconButton(onClick = {
+                                            navController.popBackStack()
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = "Back"
+                                            )
+                                        }
+                                    } else {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.baseline_ondemand_video_24),
+                                            contentDescription = "Logo"
+                                        )
+
+                                    }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Text(
                                         text = title,
@@ -161,14 +178,14 @@ class MainActivity : ComponentActivity() {
                                         selected = item.route == currentBackStack?.destination?.route || item.route == currentBackStack?.destination?.parent?.route,
                                         onClick = {
                                             navController.navigate(item.route) {
-                                                    popUpTo(navController.graph.findStartDestination().id) {
-                                                        saveState = true
-                                                    }
-                                                    // Avoid multiple copies of the same destination when
-                                                    // reselecting the same item
-                                                    launchSingleTop = true
-                                                    // Restore state when reselecting a previously selected item
-                                                    restoreState = true
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                // Avoid multiple copies of the same destination when
+                                                // reselecting the same item
+                                                launchSingleTop = true
+                                                // Restore state when reselecting a previously selected item
+                                                restoreState = true
                                             }
                                         })
                                 }
