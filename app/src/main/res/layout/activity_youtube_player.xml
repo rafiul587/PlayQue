@@ -5,13 +5,22 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <Toolbar
+        android:id="@+id/toolBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        android:title="PlayList"
+        android:navigationIcon="@drawable/baseline_arrow_back_24"
+        />
+
     <com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
         android:id="@+id/youtube_player_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:enableAutomaticInitialization="false"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/toolBar"/>
 
     <FrameLayout
         android:id="@+id/full_screen_view_container"
@@ -22,15 +31,40 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-    <TextView
-        android:id="@+id/instruction"
+
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/youtube_player_view"
-        android:layout_marginTop="40dp"
+        android:background="@drawable/bg_notice"
+        android:layout_margin="20dp">
+
+        <Button
+            android:id="@+id/openYoutube"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="Open In Youtube"
+            android:textColor="@color/white"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="#009688"/>
+    <TextView
+        android:id="@+id/instruction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:textAlignment="center"
         android:textSize="18sp"
+        android:padding="16dp"
+        android:textColor="#333333"
         android:text="@string/player_instruction"/>
+
+        <ImageView
+            android:layout_width="180dp"
+            android:layout_height="wrap_content"
+            android:src="@drawable/mark_manually_instruction"
+            android:layout_gravity="center_horizontal"/>
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

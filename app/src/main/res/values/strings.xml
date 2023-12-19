@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">Youtube Api Testing</string>
+    <string name="app_name">PlayQue</string>
     <string name="reminders_notification_channel_id">notification_channel_id</string>
     <string name="title_notification_reminder">Time to study</string>
     <string name="description_notification_reminder">It\'s time to watch a playlist \"%s\" from channel \"%s\"</string>
-    <string name="player_instruction">If you feel uncomfortable to watch videos here or need to check comments, you can watch videos in youtube and track completed video manually.</string>
+    <string name="player_instruction">If you feel uncomfortable to watch videos here or need to check comments, you can watch videos in youtube and mark the video as completed manually by clicking on the check button.</string>
     <plurals name="time_ago_years">
         <item quantity="one">%1\$d year ago</item>
         <item quantity="other">%1\$d years ago</item>

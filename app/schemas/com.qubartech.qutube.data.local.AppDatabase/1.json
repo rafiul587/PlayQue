@@ -1,0 +1,260 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "97737b514a99364447123a3aad3a1555",
+    "entities": [
+      {
+        "tableName": "Playlist",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `channelTitle` TEXT NOT NULL, `thumbnail` TEXT NOT NULL, `itemCount` INTEGER NOT NULL, `itemComplete` INTEGER NOT NULL, `isTrash` INTEGER NOT NULL, `addedTime` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "channelTitle",
+            "columnName": "channelTitle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thumbnail",
+            "columnName": "thumbnail",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemCount",
+            "columnName": "itemCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemComplete",
+            "columnName": "itemComplete",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isTrash",
+            "columnName": "isTrash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedTime",
+            "columnName": "addedTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "Reminder",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`playlistId` TEXT NOT NULL, `startDate` INTEGER NOT NULL, `endDate` INTEGER NOT NULL, `time` INTEGER NOT NULL, `daysMask` INTEGER NOT NULL, `isEnabled` INTEGER NOT NULL, PRIMARY KEY(`playlistId`), FOREIGN KEY(`playlistId`) REFERENCES `Playlist`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "playlistId",
+            "columnName": "playlistId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDate",
+            "columnName": "startDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDate",
+            "columnName": "endDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "daysMask",
+            "columnName": "daysMask",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isEnabled",
+            "columnName": "isEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "playlistId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "Playlist",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "playlistId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "Video",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `playlistId` TEXT NOT NULL, `videoPublishedAt` TEXT NOT NULL, `title` TEXT NOT NULL, `thumbnail` TEXT NOT NULL, `duration` INTEGER NOT NULL, `progress` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`playlistId`) REFERENCES `Playlist`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "playlistId",
+            "columnName": "playlistId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "videoPublishedAt",
+            "columnName": "videoPublishedAt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thumbnail",
+            "columnName": "thumbnail",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duration",
+            "columnName": "duration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "progress",
+            "columnName": "progress",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_Video_playlistId",
+            "unique": false,
+            "columnNames": [
+              "playlistId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Video_playlistId` ON `${TABLE_NAME}` (`playlistId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "Playlist",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "playlistId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "remote_keys",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nextKey` TEXT, `prevKey` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`id`) REFERENCES `Playlist`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextKey",
+            "columnName": "nextKey",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "prevKey",
+            "columnName": "prevKey",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "Playlist",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '97737b514a99364447123a3aad3a1555')"
+    ]
+  }
+}

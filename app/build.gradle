@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-    namespace 'com.example.youtubeapitesting'
+    namespace 'com.qubartech.playque'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.youtubeapitesting"
+        applicationId "com.qubartech.playque"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -37,6 +37,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {
